@@ -141,3 +141,16 @@ pub struct SaleAccount {
     // Array to keep track of all the buyers
     pub buyers_list: Vec<Pubkey>, // upto 100 buyers, (4 + 100 * 32) bytes = 3204 bytes
 } // 3244 bytes
+
+#[account]
+pub struct BuyerInfo {
+    // keep track of how many pay tokens have been spend by the buyer
+    spend_pay_tokens: u128, // 16 bytes
+    // keep tack of how many IDO tokens the buyer should get
+    ido_tokens_to_get: u128, // 16 bytes
+    // keep tack of how many IDO tokens the buyer has claimed
+    ido_tokens_claimed: u128, // 16 bytes
+    // keep track if the buyer has claimed the pay tokens spend on IDO cancel
+    has_claimed_pay_tokens: bool, // 1 bytes
+    bump: u8,                     // 1 bytes
+} // 50 bytes
