@@ -67,4 +67,16 @@ describe("solana-mangamon-sale", () => {
     expect((await program.account.authorizedSaleAccount
       .fetch(authorizedSaleAccount.publicKey)).isClaimingOpen).to.equal(false);
   });
+
+  it("Should check initialPercentageAllocationIdoTokens field!", async function () {
+    await program.methods
+      .setInitialPercentageAllocationIdoTokens(20)
+      .accounts({
+        authorizedSaleAccount: authorizedSaleAccount.publicKey,
+        admin: provider.wallet.publicKey,
+      })
+      .rpc();
+    expect((await program.account.authorizedSaleAccount
+      .fetch(authorizedSaleAccount.publicKey)).initialPercentageAllocationIdoTokens).to.equal(20);
+  });
 });
