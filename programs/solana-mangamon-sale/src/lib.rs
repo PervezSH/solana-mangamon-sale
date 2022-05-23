@@ -24,6 +24,7 @@ pub struct Initialize<'info> {
 pub struct AuthorizedSaleAccount {
     // Pubkey of Admin
     pub admin: Pubkey,
+
     // Price of idoToken in payToken value based on ratio
     pub ido_token_price_ratio: u64,
     pub ido_token_price_multiplier: u64,
@@ -48,4 +49,16 @@ pub struct AuthorizedSaleAccount {
     pub in_one_transaction: bool,
     // Enable claiming
     pub is_claiming_open: bool,
+}
+
+#[account]
+pub struct SaleAccount {
+    // Spend Pay Count
+    pub total_spend_pay_tokens: u128,
+    // Sold tokens count
+    pub total_allocated_ido_tokens: u128,
+    // Investors count
+    pub investor_count: u64,
+    // Array to keep track of all the buyers
+    pub buyers_list: Vec<Pubkey>,
 }
