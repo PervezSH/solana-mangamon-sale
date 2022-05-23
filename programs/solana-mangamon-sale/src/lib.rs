@@ -57,6 +57,26 @@ pub mod solana_mangamon_sale {
         sale_account.investor_count = 0;
         Ok(())
     }
+
+    pub fn set_initial_percentage_allocation_ido_tokens(
+        ctx: Context<SetInitialPercentageAllocationIdoTokens>,
+        _percentage: u8,
+    ) -> Result<()> {
+        let authorized_sale_account = &mut ctx.accounts.authorized_sale_account;
+        assert_eq!(
+            authorized_sale_account.is_claiming_open, false,
+            "Claiming is already enabled"
+        );
+        assert!(
+            _percentage <= 100,
+            "You cannot give more than 100 percent of the token allocation"
+        );
+        let _old_initial_percentage_allocation_ido_tokens =
+            authorized_sale_account.initial_percentage_allocation_ido_tokens;
+        authorized_sale_account.initial_percentage_allocation_ido_tokens = _percentage;
+        // emit event
+        Ok(())
+    }
 }
 
 // Validation struct for initialize
@@ -69,6 +89,14 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     pub system_program: Program<'info, System>,
+}
+
+// Validation struct for set_initial_percentage_allocation_ido_tokens
+#[derive(Accounts)]
+pub struct SetInitialPercentageAllocationIdoTokens<'info> {
+    #[account(mut, has_one = admin)]
+    pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
+    pub admin: Signer<'info>,
 }
 
 #[account]
