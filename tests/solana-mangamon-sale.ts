@@ -148,4 +148,24 @@ describe("solana-mangamon-sale", () => {
     const stringifiedError = JSON.stringify(e);
     expect(stringifiedError.includes("Claiming is already enabled")).to.equal(true);
   });
+
+  it("Should throw error while adding fund to the program address", async function () {
+    let e: any;
+    try {
+      await program.methods
+        .fundToContract(
+          new anchor.BN(14735370000)
+        )
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
+          admin: provider.wallet.publicKey,
+        })
+        .rpc();
+    } catch (error) {
+      e = error;
+    }
+    const stringifiedError = JSON.stringify(e);
+    expect(stringifiedError.includes("The Funding Period has not ended")).to.equal(true);
+  });
 });
