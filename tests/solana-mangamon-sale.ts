@@ -208,4 +208,20 @@ describe("solana-mangamon-sale", () => {
     const stringifiedError = JSON.stringify(e);
     expect(stringifiedError.includes("The Funding Period has not ended")).to.equal(true);
   });
+
+  it("Should cancle the entire sale", async function () {
+    try {
+      await program.methods
+        .cancelIdoSale()
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          admin: provider.wallet.publicKey,
+        })
+        .rpc();
+    } catch (error) {
+      console.log(error);
+    }
+    expect((await program.account.authorizedSaleAccount
+      .fetch(authorizedSaleAccount.publicKey)).isFundingCanceled).to.equal(true);
+  });
 });
