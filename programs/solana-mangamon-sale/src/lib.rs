@@ -256,6 +256,15 @@ impl<'info> UpdateBothSaleAccount<'info> {
     }
 }
 
+/// Validation struct for updating fields of SaleAccount with reference to the AuthorizedSaleAccount
+#[derive(Accounts)]
+pub struct UpdateSaleAccountWRefAuthorizedSaleAccount<'info> {
+    pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
+    #[account(mut)]
+    pub sale_account: Account<'info, SaleAccount>,
+    pub admin: Signer<'info>,
+}
+
 // Accouunts
 #[account]
 pub struct AuthorizedSaleAccount {
