@@ -165,6 +165,15 @@ pub mod solana_mangamon_sale {
         authorized_sale_account.is_ido_token_funded_to_contract = true;
         Ok(())
     }
+    /// Withdraw Pay Tokens from contract Only withdraw Pay tokens after the funding has ended
+    pub fn withdraw_pay_tokens(
+        ctx: Context<UpdateBothSaleAccount>,
+        _pay_tokens_to_withdraw: u128,
+    ) -> Result<()> {
+        assert!(ctx.accounts.is_funding_closed());
+        // withdraw pay tokens
+        Ok(())
+    }
 }
 
 /// Validation struct for initialize
