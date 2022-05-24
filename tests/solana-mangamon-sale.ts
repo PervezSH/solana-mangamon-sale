@@ -129,4 +129,23 @@ describe("solana-mangamon-sale", () => {
     expect((await program.account.authorizedSaleAccount
       .fetch(authorizedSaleAccount.publicKey)).startDateOfClaimingTokens.toNumber()).to.equal(1653385754);
   });
+
+  it("Should check end date of claiming tokens", async function () {
+    let e: any;
+    try {
+      await program.methods
+        .setEndDateOfClaimingTokens(
+          new anchor.BN(1663385754)
+        )
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          admin: provider.wallet.publicKey,
+        })
+        .rpc();
+    } catch (error) {
+      e = error;
+    }
+    const stringifiedError = JSON.stringify(e);
+    expect(stringifiedError.includes("Claiming is already enabled")).to.equal(true);
+  });
 });
