@@ -168,4 +168,24 @@ describe("solana-mangamon-sale", () => {
     const stringifiedError = JSON.stringify(e);
     expect(stringifiedError.includes("The Funding Period has not ended")).to.equal(true);
   });
+
+  it("Should throw error while withdrawing pay tokens", async function () {
+    let e: any;
+    try {
+      await program.methods
+        .withdrawPayTokens(
+          new anchor.BN(10000000)
+        )
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
+          admin: provider.wallet.publicKey,
+        })
+        .rpc();
+    } catch (error) {
+      e = error;
+    }
+    const stringifiedError = JSON.stringify(e);
+    expect(stringifiedError.includes("The Funding Period has not ended")).to.equal(true);
+  });
 });
