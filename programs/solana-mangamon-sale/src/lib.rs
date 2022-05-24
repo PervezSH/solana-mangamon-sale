@@ -154,14 +154,6 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// Validation struct for set_initial_percentage_allocation_ido_tokens
-#[derive(Accounts)]
-pub struct UpdateAuhorizedSaleAccount<'info> {
-    #[account(mut, has_one = admin)]
-    pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
-    pub admin: Signer<'info>,
-}
-
 /// Validation struct for creat_buyer_info
 #[derive(Accounts)]
 pub struct CreatBuyerInfo<'info> {
@@ -176,6 +168,21 @@ pub struct CreatBuyerInfo<'info> {
     )]
     pub buyer_info: Account<'info, BuyerInfo>,
     pub system_program: Program<'info, System>,
+}
+
+/// Validation struct for updating fields of AuthorizedSaleAccount
+#[derive(Accounts)]
+pub struct UpdateAuhorizedSaleAccount<'info> {
+    #[account(mut, has_one = admin)]
+    pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
+    pub admin: Signer<'info>,
+}
+
+/// Validation struct for reading fields of AuthorizedSaleAccount
+#[derive(Accounts)]
+pub struct ReadAuhorizedSaleAccount<'info> {
+    pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
+    pub user: Signer<'info>,
 }
 
 // Accouunts
