@@ -58,16 +58,6 @@ pub mod solana_mangamon_sale {
         Ok(())
     }
 
-    /// Change the initial percentage of token allocation to be claimed
-    pub fn set_initial_percentage_allocation_ido_tokens(
-        ctx: Context<UpdateAuhorizedSaleAccount>,
-        _percentage: u8,
-    ) -> Result<()> {
-        ctx.accounts
-            .set_initial_percentage_allocation_ido_tokens(_percentage);
-        Ok(())
-    }
-
     /// Builds a PDA hashmap, and initializes its fields
     pub fn creat_buyer_info(
         ctx: Context<CreatBuyerInfo>,
@@ -81,6 +71,36 @@ pub mod solana_mangamon_sale {
         buyer_info.ido_tokens_claimed = 0;
         buyer_info.has_claimed_pay_tokens = false;
         buyer_info.bump = *ctx.bumps.get("buyer_info").unwrap();
+        Ok(())
+    }
+
+    // Setters
+    /// Change the initial percentage of token allocation to be claimed
+    pub fn set_initial_percentage_allocation_ido_tokens(
+        ctx: Context<UpdateAuhorizedSaleAccount>,
+        _percentage: u8,
+    ) -> Result<()> {
+        ctx.accounts
+            .set_initial_percentage_allocation_ido_tokens(_percentage);
+        Ok(())
+    }
+    /// Set if the claiming is enabled or not
+    pub fn enable_claiming(
+        ctx: Context<UpdateAuhorizedSaleAccount>,
+        _is_claiming_open: bool,
+        _start_date_of_claiming_tokens: i64,
+    ) -> Result<()> {
+        let authorized_sale_account = &mut ctx.accounts.authorized_sale_account;
+        let _old_is_claiming_open = authorized_sale_account.is_claiming_open;
+
+        authorized_sale_account.is_claiming_open = _is_claiming_open;
+        authorized_sale_account.start_date_of_claiming_tokens = _start_date_of_claiming_tokens;
+
+        emit!(ChangedIsClaimingOpen {
+            admin: *ctx.accounts.admin.key,
+            old_is_claiming_open: _old_is_claiming_open,
+            is_claiming_open: authorized_sale_account.is_claiming_open
+        });
         Ok(())
     }
 }
@@ -105,6 +125,7 @@ pub struct UpdateAuhorizedSaleAccount<'info> {
     pub admin: Signer<'info>,
 }
 impl<'info> UpdateAuhorizedSaleAccount<'info> {
+    /// Changes the initial percentage of token allocation to be claimed
     pub fn set_initial_percentage_allocation_ido_tokens(&mut self, _percentage: u8) {
         assert_eq!(
             self.authorized_sale_account.is_claiming_open, false,
