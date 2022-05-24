@@ -132,6 +132,7 @@ pub struct CreatBuyerInfo<'info> {
     pub system_program: Program<'info, System>,
 }
 
+// Accouunts
 #[account]
 pub struct AuthorizedSaleAccount {
     // Pubkey of Admin
@@ -187,3 +188,48 @@ pub struct BuyerInfo {
     has_claimed_pay_tokens: bool, // 1 bytes
     bump: u8,                     // 1 bytes
 } // 50 bytes
+
+// Events
+/// Event that will get emitted on buying IDO tokens
+#[event]
+pub struct BoughtIDOTokens {
+    pub buyer: Pubkey,
+    pub spend_pay_tokens: u128,
+    pub ido_tokens_to_get: u128,
+    pub timestamp: i64,
+}
+/// Event that will get emitted on claiming IDO tokens
+#[event]
+pub struct ClaimedIDOTokens {
+    pub buyer: Pubkey,
+    pub ido_tokens_to_get: u128,
+}
+
+// Logging
+/// Event that will get emmited on changing end date, untill token can be claimed
+#[event]
+pub struct ChangedEndDateOfClaimingTokens {
+    pub admin: Pubkey,
+    pub old_end_date_of_claiming_tokens: i64,
+    pub end_date_of_claiming_tokens: i64,
+}
+/// Event that will get emmited on changing end date, untill token can be claimed
+#[event]
+pub struct ChangedIsClaimingOpen {
+    pub admin: Pubkey,
+    pub old_is_claiming_open: bool,
+    pub is_claiming_open: bool,
+}
+/// Event that will get emmited on changing initial percentage allocation of IDO tokens
+#[event]
+pub struct ChangedInitialPercentageAllocationIdoTokens {
+    pub admin: Pubkey,
+    pub old_initial_percentage_allocation_ido_tokens: u8,
+    pub initial_percentage_allocation_ido_tokens: u8,
+}
+// Event that will get emmited on changing IDO token address
+// pub struct ChangedIdoTokenAddress {
+//     pub admin: Pubkey,
+//     pub old_ito_token: bool,
+//     pub new_ido_token: bool,
+// }
