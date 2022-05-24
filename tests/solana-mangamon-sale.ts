@@ -1,5 +1,6 @@
 import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
+import { PublicKey } from '@solana/web3.js';
 import { SolanaMangamonSale } from "../target/types/solana_mangamon_sale";
 import { expect } from 'chai';
 
@@ -78,5 +79,33 @@ describe("solana-mangamon-sale", () => {
       .rpc();
     expect((await program.account.authorizedSaleAccount
       .fetch(authorizedSaleAccount.publicKey)).initialPercentageAllocationIdoTokens).to.equal(20);
+  });
+
+  it("Should check buyer's info", async function () {
+    const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+      [
+        anchor.utils.bytes.utf8.encode("buyer-info"),
+        provider.wallet.publicKey.toBuffer()
+      ],
+      program.programId
+    );
+    await program.methods
+      .creatBuyerInfo(
+        new anchor.BN(109430000),
+        new anchor.BN(2735700000000000),
+      )
+      .accounts({
+        user: provider.wallet.publicKey,
+        buyerInfo: buyerInfoPDA,
+      })
+      .rpc();
+    expect((await program.account.buyerInfo
+      .fetch(buyerInfoPDA)).spendPayTokens.toNumber()).to.equal(109430000);
+    expect((await program.account.buyerInfo
+      .fetch(buyerInfoPDA)).idoTokensToGet.toNumber()).to.equal(2735700000000000);
+    expect((await program.account.buyerInfo
+      .fetch(buyerInfoPDA)).idoTokensClaimed.toNumber()).to.equal(0);
+    expect((await program.account.buyerInfo
+      .fetch(buyerInfoPDA)).hasClaimedPayTokens).to.equal(false);
   });
 });
