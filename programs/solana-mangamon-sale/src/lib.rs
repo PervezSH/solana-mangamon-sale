@@ -183,6 +183,12 @@ pub mod solana_mangamon_sale {
         // If IDO token is available, withdraw ido tokens
         Ok(())
     }
+    /// Cancels the entire sale
+    pub fn cancel_ido_sale(ctx: Context<UpdateAuhorizedSaleAccount>) -> Result<()> {
+        let authorized_sale_account = &mut ctx.accounts.authorized_sale_account;
+        authorized_sale_account.is_funding_canceled = true;
+        Ok(())
+    }
 }
 
 /// Validation struct for initialize
