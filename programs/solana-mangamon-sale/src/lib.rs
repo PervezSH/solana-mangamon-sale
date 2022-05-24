@@ -77,6 +77,21 @@ pub mod solana_mangamon_sale {
         // emit event
         Ok(())
     }
+
+    pub fn creat_buyer_info(
+        ctx: Context<CreatBuyerInfo>,
+        _spend_pay_tokens: u128,
+        _ido_tokens_to_get: u128,
+    ) -> Result<()> {
+        println!("I'm in");
+        let buyer_info = &mut ctx.accounts.buyer_info;
+        buyer_info.spend_pay_tokens = _spend_pay_tokens;
+        buyer_info.ido_tokens_to_get = _ido_tokens_to_get;
+        buyer_info.ido_tokens_claimed = 0;
+        buyer_info.has_claimed_pay_tokens = false;
+        buyer_info.bump = *ctx.bumps.get("buyer_info").unwrap();
+        Ok(())
+    }
 }
 
 // Validation struct for initialize
@@ -97,6 +112,22 @@ pub struct SetInitialPercentageAllocationIdoTokens<'info> {
     #[account(mut, has_one = admin)]
     pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
     pub admin: Signer<'info>,
+}
+
+// Validation struct for CreatBuyerInfo
+#[derive(Accounts)]
+pub struct CreatBuyerInfo<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+    #[account(
+        init,
+        payer = user,
+        space = 8 + 50,
+        seeds = [b"buyer-info", user.key().as_ref()],
+        bump
+    )]
+    pub buyer_info: Account<'info, BuyerInfo>,
+    pub system_program: Program<'info, System>,
 }
 
 #[account]
