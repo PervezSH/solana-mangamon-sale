@@ -103,6 +103,25 @@ pub mod solana_mangamon_sale {
         });
         Ok(())
     }
+    /// Set the end date for tokens to be claimed by all buyers
+    pub fn set_end_date_of_claiming_tokens(
+        ctx: Context<UpdateAuhorizedSaleAccount>,
+        _end_date_of_claiming_tokens: i64,
+    ) -> Result<()> {
+        let authorized_sale_account = &mut ctx.accounts.authorized_sale_account;
+        assert_eq!(
+            authorized_sale_account.is_claiming_open, false,
+            "Claiming is already enabled"
+        );
+        let _old_end_date_of_claiming_tokens = authorized_sale_account.end_date_of_claiming_tokens;
+        authorized_sale_account.end_date_of_claiming_tokens = _end_date_of_claiming_tokens;
+        emit!(ChangedEndDateOfClaimingTokens {
+            admin: *ctx.accounts.admin.key,
+            old_end_date_of_claiming_tokens: _old_end_date_of_claiming_tokens,
+            end_date_of_claiming_tokens: authorized_sale_account.end_date_of_claiming_tokens
+        });
+        Ok(())
+    }
 }
 
 /// Validation struct for initialize
