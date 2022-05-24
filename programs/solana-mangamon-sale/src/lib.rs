@@ -80,8 +80,26 @@ pub mod solana_mangamon_sale {
         ctx: Context<UpdateAuhorizedSaleAccount>,
         _percentage: u8,
     ) -> Result<()> {
-        ctx.accounts
-            .set_initial_percentage_allocation_ido_tokens(_percentage);
+        let authorized_sale_account = &mut ctx.accounts.authorized_sale_account;
+        assert_eq!(
+            authorized_sale_account.is_claiming_open, false,
+            "Claiming is already enabled"
+        );
+        assert!(
+            _percentage <= 100,
+            "You cannot give more than 100 percent of the token allocation"
+        );
+        let _old_initial_percentage_allocation_ido_tokens =
+            authorized_sale_account.initial_percentage_allocation_ido_tokens;
+        authorized_sale_account.initial_percentage_allocation_ido_tokens = _percentage;
+        // emit event
+        emit!(ChangedInitialPercentageAllocationIdoTokens {
+            admin: *ctx.accounts.admin.key,
+            old_initial_percentage_allocation_ido_tokens:
+                _old_initial_percentage_allocation_ido_tokens,
+            initial_percentage_allocation_ido_tokens: authorized_sale_account
+                .initial_percentage_allocation_ido_tokens
+        });
         Ok(())
     }
     /// Set if the claiming is enabled or not
@@ -142,33 +160,6 @@ pub struct UpdateAuhorizedSaleAccount<'info> {
     #[account(mut, has_one = admin)]
     pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
     pub admin: Signer<'info>,
-}
-impl<'info> UpdateAuhorizedSaleAccount<'info> {
-    /// Changes the initial percentage of token allocation to be claimed
-    pub fn set_initial_percentage_allocation_ido_tokens(&mut self, _percentage: u8) {
-        assert_eq!(
-            self.authorized_sale_account.is_claiming_open, false,
-            "Claiming is already enabled"
-        );
-        assert!(
-            _percentage <= 100,
-            "You cannot give more than 100 percent of the token allocation"
-        );
-        let _old_initial_percentage_allocation_ido_tokens = self
-            .authorized_sale_account
-            .initial_percentage_allocation_ido_tokens;
-        self.authorized_sale_account
-            .initial_percentage_allocation_ido_tokens = _percentage;
-        // emit event
-        emit!(ChangedInitialPercentageAllocationIdoTokens {
-            admin: *self.admin.key,
-            old_initial_percentage_allocation_ido_tokens:
-                _old_initial_percentage_allocation_ido_tokens,
-            initial_percentage_allocation_ido_tokens: self
-                .authorized_sale_account
-                .initial_percentage_allocation_ido_tokens
-        });
-    }
 }
 
 /// Validation struct for creat_buyer_info
