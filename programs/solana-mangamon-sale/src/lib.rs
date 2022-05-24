@@ -58,6 +58,7 @@ pub mod solana_mangamon_sale {
         Ok(())
     }
 
+    /// Change the initial percentage of token allocation to be claimed
     pub fn set_initial_percentage_allocation_ido_tokens(
         ctx: Context<SetInitialPercentageAllocationIdoTokens>,
         _percentage: u8,
@@ -78,6 +79,7 @@ pub mod solana_mangamon_sale {
         Ok(())
     }
 
+    /// Builds a PDA hashmap, and initializes its fields
     pub fn creat_buyer_info(
         ctx: Context<CreatBuyerInfo>,
         _spend_pay_tokens: u128,
@@ -94,7 +96,7 @@ pub mod solana_mangamon_sale {
     }
 }
 
-// Validation struct for initialize
+/// Validation struct for initialize
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(init, payer = user, space = 8 + 101)]
@@ -106,7 +108,7 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// Validation struct for set_initial_percentage_allocation_ido_tokens
+/// Validation struct for set_initial_percentage_allocation_ido_tokens
 #[derive(Accounts)]
 pub struct SetInitialPercentageAllocationIdoTokens<'info> {
     #[account(mut, has_one = admin)]
@@ -114,7 +116,7 @@ pub struct SetInitialPercentageAllocationIdoTokens<'info> {
     pub admin: Signer<'info>,
 }
 
-// Validation struct for CreatBuyerInfo
+/// Validation struct for creat_buyer_info
 #[derive(Accounts)]
 pub struct CreatBuyerInfo<'info> {
     #[account(mut)]
