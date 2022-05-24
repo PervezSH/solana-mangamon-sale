@@ -76,6 +76,13 @@ pub mod solana_mangamon_sale {
             authorized_sale_account.initial_percentage_allocation_ido_tokens;
         authorized_sale_account.initial_percentage_allocation_ido_tokens = _percentage;
         // emit event
+        emit!(ChangedInitialPercentageAllocationIdoTokens {
+            admin: *ctx.accounts.admin.key,
+            old_initial_percentage_allocation_ido_tokens:
+                _old_initial_percentage_allocation_ido_tokens,
+            initial_percentage_allocation_ido_tokens: authorized_sale_account
+                .initial_percentage_allocation_ido_tokens
+        });
         Ok(())
     }
 
