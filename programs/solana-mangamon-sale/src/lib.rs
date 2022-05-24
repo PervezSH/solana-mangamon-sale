@@ -174,6 +174,15 @@ pub mod solana_mangamon_sale {
         // withdraw pay tokens
         Ok(())
     }
+    /// Withdraw unsold IDO tokens
+    pub fn withdraw_unsold_ido_tokens(
+        ctx: Context<UpdateBothSaleAccount>,
+        _ido_tokens_to_withdraw: u128,
+    ) -> Result<()> {
+        assert!(ctx.accounts.is_funding_closed());
+        // If IDO token is available, withdraw ido tokens
+        Ok(())
+    }
 }
 
 /// Validation struct for initialize
