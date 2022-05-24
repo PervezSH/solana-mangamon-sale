@@ -140,6 +140,31 @@ pub mod solana_mangamon_sale {
         });
         Ok(())
     }
+
+    // BusinessLogic
+    /// Give the programAddress the ido tokens to be sold
+    pub fn fund_to_contract(
+        ctx: Context<UpdateBothSaleAccount>,
+        _amount_in_ido_tokens: u128,
+    ) -> Result<()> {
+        assert!(ctx.accounts.is_funding_closed());
+        assert!(ctx.accounts.is_funding_not_canceled_by_admin());
+        let authorized_sale_account = &mut ctx.accounts.authorized_sale_account;
+        let sale_account = &mut ctx.accounts.sale_account;
+        assert_eq!(
+            authorized_sale_account.is_ido_token_funded_to_contract, false,
+            "Already funded tokens"
+        );
+        assert!(
+            sale_account.total_allocated_ido_tokens <= _amount_in_ido_tokens,
+            "You should at least match the totalAllocatedIdoTokens"
+        );
+        // check if admin have enough tokens to fund to the contract
+        // transfer funds
+        authorized_sale_account.tokens_for_sale = _amount_in_ido_tokens;
+        authorized_sale_account.is_ido_token_funded_to_contract = true;
+        Ok(())
+    }
 }
 
 /// Validation struct for initialize
@@ -178,13 +203,16 @@ pub struct UpdateAuhorizedSaleAccount<'info> {
     pub admin: Signer<'info>,
 }
 
-/// Validation struct for reading fields of AuthorizedSaleAccount
+/// Validation struct for updating fields of both AuthorizedSaleAccount and SaleAccount
 #[derive(Accounts)]
-pub struct ReadAuhorizedSaleAccount<'info> {
+pub struct UpdateBothSaleAccount<'info> {
+    #[account(mut, has_one = admin)]
     pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
-    pub user: Signer<'info>,
+    #[account(mut)]
+    pub sale_account: Account<'info, SaleAccount>,
+    pub admin: Signer<'info>,
 }
-impl<'info> ReadAuhorizedSaleAccount<'info> {
+impl<'info> UpdateBothSaleAccount<'info> {
     /// Check if the contract has been funded enough sale tokens
     pub fn is_ido_token_funded(&self) -> bool {
         assert!(
