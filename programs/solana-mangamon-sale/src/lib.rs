@@ -237,38 +237,12 @@ pub struct UpdateBothSaleAccount<'info> {
     pub admin: Signer<'info>,
 }
 impl<'info> UpdateBothSaleAccount<'info> {
-    /// Check if the contract has been funded enough sale tokens
-    pub fn is_ido_token_funded(&self) -> bool {
-        assert!(
-            self.authorized_sale_account.is_ido_token_funded_to_contract,
-            "The contract did not receive the IDO tokens"
-        );
-        true
-    }
-    /// Check if the Funding period is open
-    pub fn is_funding_open_and_running(&self) -> bool {
-        let now_ts = Clock::get().unwrap().unix_timestamp;
-        assert!(
-            now_ts >= self.authorized_sale_account.start_date_funding
-                && now_ts <= self.authorized_sale_account.end_date_funding,
-            "The Funding Period is not Open"
-        );
-        true
-    }
     /// Check if the Funding has ended
     pub fn is_funding_closed(&self) -> bool {
         let now_ts = Clock::get().unwrap().unix_timestamp;
         assert!(
             now_ts > self.authorized_sale_account.end_date_funding,
             "The Funding Period has not ended"
-        );
-        true
-    }
-    /// Check if the Funding has been canceled
-    pub fn is_funding_canceled_by_admin(&self) -> bool {
-        assert_eq!(
-            self.authorized_sale_account.is_funding_canceled, true,
-            "Funding has not been canceled"
         );
         true
     }
