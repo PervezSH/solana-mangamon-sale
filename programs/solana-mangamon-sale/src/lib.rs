@@ -142,6 +142,50 @@ pub mod solana_mangamon_sale {
     }
 
     // BusinessLogic
+    /// Calculates how much Payment tokens needed to acquire IDO token allocation
+    pub fn calculate_max_payment_token(
+        ctx: Context<ReadBothSaleAccount>,
+        _ido_tokens_to_get: u128,
+    ) -> Result<u128> {
+        let authorized_sale_account = &ctx.accounts.authorized_sale_account;
+
+        let ido_token_decimal: u128 = 10u128.checked_pow(18 - 2).unwrap();
+        let pay_token_token_decimal: u128 = 10u128.checked_pow(6 - 2).unwrap();
+
+        let _ido_tokens_to_get: u128 = _ido_tokens_to_get.checked_div(ido_token_decimal).unwrap(); // 10000000000000000 / 10 ^ 16 = 1
+
+        let ido_token_price_ratio = authorized_sale_account.ido_token_price_ratio as u128;
+        let _divide_by_ratio = ido_token_price_ratio
+            .checked_mul(pay_token_token_decimal)
+            .unwrap(); // (4 * 10 ^ 3) * 10 ^ 4 = 4 * 10 ^ 7
+
+        let mut _amount_in_pay_token = (_ido_tokens_to_get).checked_mul(_divide_by_ratio).unwrap(); // 1 * 4 * 10 ^ 7 = 4 * 10 ^ 7
+        let ido_token_price_multiplier = authorized_sale_account.ido_token_price_multiplier as u128;
+        _amount_in_pay_token = _amount_in_pay_token
+            .checked_div(ido_token_price_multiplier)
+            .unwrap(); // (4 * 10 ^ 7) / 10 ^ 4 = 4 * 10 ^ 3 USDC tokens
+        Ok(_amount_in_pay_token)
+    }
+    /// Calculate the amount of Ido Tokens bought
+    pub fn calculate_ido_tokens_bought(
+        ctx: Context<ReadBothSaleAccount>,
+        _amount_in_pay_token: u128,
+    ) -> Result<u128> {
+        let authorized_sale_account = &ctx.accounts.authorized_sale_account;
+
+        let ido_token_decimal: u128 = 10u128.checked_pow(18 - 2).unwrap();
+        let pay_token_token_decimal: u128 = 10u128.checked_pow(6 - 2).unwrap();
+
+        let _amount_in_pay_token = _amount_in_pay_token
+            .checked_mul(authorized_sale_account.ido_token_price_multiplier as u128)
+            .unwrap(); // 250_000_000 * 10_000 = 2_500_000_000_000
+        let _divide_by_ratio = (authorized_sale_account.ido_token_price_ratio as u128)
+            .checked_mul(pay_token_token_decimal)
+            .unwrap(); // 4_000 * 10_000 = 40_000_000
+        let mut _ido_tokens_to_get = _amount_in_pay_token.checked_div(_divide_by_ratio).unwrap(); // 2_500_000_000_000 / 40_000_000 = 62_500
+        _ido_tokens_to_get = _ido_tokens_to_get.checked_mul(ido_token_decimal).unwrap(); // 62_500 * 10_000_000_000_000_000 = 625_000_000_000_000_000_000
+        Ok(_ido_tokens_to_get)
+    }
     /// Give the programAddress the ido tokens to be sold
     pub fn fund_to_contract(
         ctx: Context<UpdateBothSaleAccount>,
@@ -189,49 +233,19 @@ pub mod solana_mangamon_sale {
         authorized_sale_account.is_funding_canceled = true;
         Ok(())
     }
-    /// Calculates how much Payment tokens needed to acquire IDO token allocation
-    pub fn calculate_max_payment_token(
-        ctx: Context<ReadBothSaleAccount>,
-        _ido_tokens_to_get: u128,
-    ) -> Result<u128> {
-        let authorized_sale_account = &ctx.accounts.authorized_sale_account;
-
-        let ido_token_decimal: u128 = 10u128.checked_pow(18 - 2).unwrap();
-        let pay_token_token_decimal: u128 = 10u128.checked_pow(6 - 2).unwrap();
-
-        let _ido_tokens_to_get: u128 = _ido_tokens_to_get.checked_div(ido_token_decimal).unwrap(); // 10000000000000000 / 10 ^ 16 = 1
-
-        let ido_token_price_ratio = authorized_sale_account.ido_token_price_ratio as u128;
-        let _divide_by_ratio = ido_token_price_ratio
-            .checked_mul(pay_token_token_decimal)
-            .unwrap(); // (4 * 10 ^ 3) * 10 ^ 4 = 4 * 10 ^ 7
-
-        let mut _amount_in_pay_token = (_ido_tokens_to_get).checked_mul(_divide_by_ratio).unwrap(); // 1 * 4 * 10 ^ 7 = 4 * 10 ^ 7
-        let ido_token_price_multiplier = authorized_sale_account.ido_token_price_multiplier as u128;
-        _amount_in_pay_token = _amount_in_pay_token
-            .checked_div(ido_token_price_multiplier)
-            .unwrap(); // (4 * 10 ^ 7) / 10 ^ 4 = 4 * 10 ^ 3 USDC tokens
-        Ok(_amount_in_pay_token)
-    }
-    /// Calculate the amount of Ido Tokens bought
-    pub fn calculate_ido_tokens_bought(
-        ctx: Context<ReadBothSaleAccount>,
-        _amount_in_pay_token: u128,
-    ) -> Result<u128> {
-        let authorized_sale_account = &ctx.accounts.authorized_sale_account;
-
-        let ido_token_decimal: u128 = 10u128.checked_pow(18 - 2).unwrap();
-        let pay_token_token_decimal: u128 = 10u128.checked_pow(6 - 2).unwrap();
-
-        let _amount_in_pay_token = _amount_in_pay_token
-            .checked_mul(authorized_sale_account.ido_token_price_multiplier as u128)
-            .unwrap(); // 250_000_000 * 10_000 = 2_500_000_000_000
-        let _divide_by_ratio = (authorized_sale_account.ido_token_price_ratio as u128)
-            .checked_mul(pay_token_token_decimal)
-            .unwrap(); // 4_000 * 10_000 = 40_000_000
-        let mut _ido_tokens_to_get = _amount_in_pay_token.checked_div(_divide_by_ratio).unwrap(); // 2_500_000_000_000 / 40_000_000 = 62_500
-        _ido_tokens_to_get = _ido_tokens_to_get.checked_mul(ido_token_decimal).unwrap(); // 62_500 * 10_000_000_000_000_000 = 625_000_000_000_000_000_000
-        Ok(_ido_tokens_to_get)
+    /// Let users claim his payed tokens if ido sale is canceled
+    pub fn claim_payed_tokens_on_ido_cancel(ctx: Context<UpdateBuyerInfo>) -> Result<()> {
+        let buyer_info = &mut ctx.accounts.buyer_info;
+        assert_eq!(
+            buyer_info.has_claimed_pay_tokens, false,
+            "You have been refunded already"
+        );
+        let _pay_tokens_to_return = buyer_info.spend_pay_tokens;
+        // update states
+        buyer_info.spend_pay_tokens = 0;
+        buyer_info.has_claimed_pay_tokens = true;
+        // transfer pay tokens
+        Ok(())
     }
 }
 
@@ -315,6 +329,14 @@ pub struct ReadBothSaleAccount<'info> {
     pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
     pub sale_account: Account<'info, SaleAccount>,
     pub user: Signer<'info>,
+}
+
+/// Validation struct for updating buyer's info
+#[derive(Accounts)]
+pub struct UpdateBuyerInfo<'info> {
+    pub user: Signer<'info>,
+    #[account(mut, seeds = [b"buyer-info", user.key().as_ref()], bump = buyer_info.bump)]
+    pub buyer_info: Account<'info, BuyerInfo>,
 }
 
 // Accouunts
