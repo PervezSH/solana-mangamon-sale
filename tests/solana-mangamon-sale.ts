@@ -80,8 +80,8 @@ describe("solana-mangamon-sale", () => {
     );
     await program.methods
       .creatBuyerInfo(
-        new anchor.BN(109430000),
-        new anchor.BN(2735700000000000),
+        new anchor.BN(0),
+        new anchor.BN(0),
       )
       .accounts({
         user: provider.wallet.publicKey,
@@ -89,9 +89,9 @@ describe("solana-mangamon-sale", () => {
       })
       .rpc();
     expect((await program.account.buyerInfo
-      .fetch(buyerInfoPDA)).spendPayTokens.toNumber()).to.equal(109430000);
+      .fetch(buyerInfoPDA)).spendPayTokens.toNumber()).to.equal(0);
     expect((await program.account.buyerInfo
-      .fetch(buyerInfoPDA)).idoTokensToGet.toNumber()).to.equal(2735700000000000);
+      .fetch(buyerInfoPDA)).idoTokensToGet.toNumber()).to.equal(0);
     expect((await program.account.buyerInfo
       .fetch(buyerInfoPDA)).idoTokensClaimed.toNumber()).to.equal(0);
     expect((await program.account.buyerInfo
@@ -228,6 +228,49 @@ describe("solana-mangamon-sale", () => {
     }
     const stringifiedError = JSON.stringify(e);
     expect(stringifiedError.includes("The Funding Period has not ended")).to.equal(true);
+  });
+
+  it("Should check if user can buy IDO tokens", async function () {
+    const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+      [
+        anchor.utils.bytes.utf8.encode("buyer-info"),
+        provider.wallet.publicKey.toBuffer()
+      ],
+      program.programId
+    );
+    try {
+      // cancel funding
+      await program.methods
+        .cancelIdoSale()
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          admin: provider.wallet.publicKey,
+        })
+        .rpc();
+      await program.methods
+        .buy(
+          new anchor.BN(4000)
+        )
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
+          buyerInfo: buyerInfoPDA,
+          user: provider.wallet.publicKey
+        })
+        .rpc();
+    } catch (error) {
+      console.log(error);
+    }
+    expect((await program.account.saleAccount
+      .fetch(saleAccount.publicKey)).investorCount.toNumber()).to.equal(1);
+    expect(String((await program.account.saleAccount
+      .fetch(saleAccount.publicKey)).totalSpendPayTokens)).to.equal("4000");
+    expect(String((await program.account.saleAccount
+      .fetch(saleAccount.publicKey)).totalAllocatedIdoTokens)).to.equal("10000000000000000");
+    expect(String((await program.account.buyerInfo
+      .fetch(buyerInfoPDA)).spendPayTokens)).to.equal("4000");
+    expect(String((await program.account.buyerInfo
+      .fetch(buyerInfoPDA)).idoTokensToGet)).to.equal("10000000000000000");
   });
 
   it("Should throw error while withdrawing pay tokens", async function () {
