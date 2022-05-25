@@ -242,4 +242,23 @@ describe("solana-mangamon-sale", () => {
       console.log(error);
     }
   });
+
+  it("Should calculate the amount of Ido Tokens bought", async function () {
+    let returnData: any;
+    try {
+      returnData = await program.methods
+        .calculateIdoTokensBought(
+          new anchor.BN("250000000")
+        )
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
+          user: provider.wallet.publicKey,
+        })
+        .view();
+    } catch (error) {
+      console.log(error);
+    }
+    expect(String(returnData)).to.equal("625000000000000000000");
+  });
 });
