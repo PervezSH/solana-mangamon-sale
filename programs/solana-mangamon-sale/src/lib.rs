@@ -141,6 +141,18 @@ pub mod solana_mangamon_sale {
         Ok(())
     }
 
+    // Getters
+    /// Returns boolean of the wallet address when he is a buyer or not
+    pub fn is_buyer(ctx: Context<ReadBothSaleAccount>, _buyer: Pubkey) -> Result<bool> {
+        let buyers_list = &ctx.accounts.sale_account.buyers_list;
+        for buyer in buyers_list {
+            if buyer.to_bytes() == _buyer.to_bytes() {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
     // BusinessLogic
     /// Calculates how much Payment tokens needed to acquire IDO token allocation
     pub fn calculate_max_payment_token(
