@@ -224,4 +224,22 @@ describe("solana-mangamon-sale", () => {
     expect((await program.account.authorizedSaleAccount
       .fetch(authorizedSaleAccount.publicKey)).isFundingCanceled).to.equal(true);
   });
+
+  it("Should calculates how much Payment tokens needed to acquire IDO token allocation", async function () {
+    try {
+      const returnData = await program.methods
+        .calculateMaxPaymentToken(
+          new anchor.BN("10000000000000000")
+        )
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
+          user: provider.wallet.publicKey,
+        })
+        .view();
+      expect(returnData.toNumber()).to.equal(4000);
+    } catch (error) {
+      console.log(error);
+    }
+  });
 });
