@@ -213,6 +213,26 @@ pub mod solana_mangamon_sale {
             .unwrap(); // (4 * 10 ^ 7) / 10 ^ 4 = 4 * 10 ^ 3 USDC tokens
         Ok(_amount_in_pay_token)
     }
+    /// Calculate the amount of Ido Tokens bought
+    pub fn calculate_ido_tokens_bought(
+        ctx: Context<ReadBothSaleAccount>,
+        _amount_in_pay_token: u128,
+    ) -> Result<u128> {
+        let authorized_sale_account = &ctx.accounts.authorized_sale_account;
+
+        let ido_token_decimal: u128 = 10u128.checked_pow(18 - 2).unwrap();
+        let pay_token_token_decimal: u128 = 10u128.checked_pow(6 - 2).unwrap();
+
+        let _amount_in_pay_token = _amount_in_pay_token
+            .checked_mul(authorized_sale_account.ido_token_price_multiplier as u128)
+            .unwrap(); // 250_000_000 * 10_000 = 2_500_000_000_000
+        let _divide_by_ratio = (authorized_sale_account.ido_token_price_ratio as u128)
+            .checked_mul(pay_token_token_decimal)
+            .unwrap(); // 4_000 * 10_000 = 40_000_000
+        let mut _ido_tokens_to_get = _amount_in_pay_token.checked_div(_divide_by_ratio).unwrap(); // 2_500_000_000_000 / 40_000_000 = 62_500
+        _ido_tokens_to_get = _ido_tokens_to_get.checked_mul(ido_token_decimal).unwrap(); // 62_500 * 10_000_000_000_000_000 = 625_000_000_000_000_000_000
+        Ok(_ido_tokens_to_get)
+    }
 }
 
 /// Validation struct for initialize
