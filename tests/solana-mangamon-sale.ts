@@ -261,4 +261,29 @@ describe("solana-mangamon-sale", () => {
     }
     expect(String(returnData)).to.equal("625000000000000000000");
   });
+
+  it("Should check if user can claim payed token if funding is canceled", async function () {
+    const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+      [
+        anchor.utils.bytes.utf8.encode("buyer-info"),
+        provider.wallet.publicKey.toBuffer()
+      ],
+      program.programId
+    );
+    try {
+      await program.methods
+        .claimPayedTokensOnIdoCancel()
+        .accounts({
+          user: provider.wallet.publicKey,
+          buyerInfo: buyerInfoPDA
+        })
+        .rpc();
+    } catch (error) {
+      console.log(error);
+    }
+    expect((await program.account.buyerInfo
+      .fetch(buyerInfoPDA)).spendPayTokens.toNumber()).to.equal(0);
+    expect((await program.account.buyerInfo
+      .fetch(buyerInfoPDA)).hasClaimedPayTokens).to.equal(true);
+  });
 });
