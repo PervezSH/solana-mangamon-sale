@@ -15,6 +15,7 @@ describe("solana-mangamon-sale", () => {
   const authorizedSaleAccount = anchor.web3.Keypair.generate();
   const saleAccount = anchor.web3.Keypair.generate();
 
+  // Account initialization
   it("Is initialized!", async () => {
     // Add your test here.
     const tx = await program.methods
@@ -69,18 +70,6 @@ describe("solana-mangamon-sale", () => {
       .fetch(authorizedSaleAccount.publicKey)).isClaimingOpen).to.equal(false);
   });
 
-  it("Should check initialPercentageAllocationIdoTokens field!", async function () {
-    await program.methods
-      .setInitialPercentageAllocationIdoTokens(20)
-      .accounts({
-        authorizedSaleAccount: authorizedSaleAccount.publicKey,
-        admin: provider.wallet.publicKey,
-      })
-      .rpc();
-    expect((await program.account.authorizedSaleAccount
-      .fetch(authorizedSaleAccount.publicKey)).initialPercentageAllocationIdoTokens).to.equal(20);
-  });
-
   it("Should check buyer's info", async function () {
     const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
       [
@@ -107,6 +96,19 @@ describe("solana-mangamon-sale", () => {
       .fetch(buyerInfoPDA)).idoTokensClaimed.toNumber()).to.equal(0);
     expect((await program.account.buyerInfo
       .fetch(buyerInfoPDA)).hasClaimedPayTokens).to.equal(false);
+  });
+
+  // Setters
+  it("Should check initialPercentageAllocationIdoTokens field!", async function () {
+    await program.methods
+      .setInitialPercentageAllocationIdoTokens(20)
+      .accounts({
+        authorizedSaleAccount: authorizedSaleAccount.publicKey,
+        admin: provider.wallet.publicKey,
+      })
+      .rpc();
+    expect((await program.account.authorizedSaleAccount
+      .fetch(authorizedSaleAccount.publicKey)).initialPercentageAllocationIdoTokens).to.equal(20);
   });
 
   it("Should check start date of claiming tokens", async function () {
@@ -147,6 +149,65 @@ describe("solana-mangamon-sale", () => {
     }
     const stringifiedError = JSON.stringify(e);
     expect(stringifiedError.includes("Claiming is already enabled")).to.equal(true);
+  });
+
+  // Getters
+  it("Should check if the provided wallet address is buyer", async function () {
+    let returnData: boolean;
+    try {
+      const user = anchor.web3.Keypair.generate();
+      returnData = await program.methods
+        .isBuyer(
+          user.publicKey
+        )
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
+          user: provider.wallet.publicKey
+        })
+        .view();
+    } catch (error) {
+      console.log(error);
+    }
+    expect(returnData).to.equal(false);
+  });
+
+  // Business Logic
+  it("Should calculates how much Payment tokens needed to acquire IDO token allocation", async function () {
+    try {
+      const returnData = await program.methods
+        .calculateMaxPaymentToken(
+          new anchor.BN("10000000000000000")
+        )
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
+          user: provider.wallet.publicKey,
+        })
+        .view();
+      expect(returnData.toNumber()).to.equal(4000);
+    } catch (error) {
+      console.log(error);
+    }
+  });
+
+  it("Should calculate the amount of Ido Tokens bought", async function () {
+    let returnData: any;
+    try {
+      returnData = await program.methods
+        .calculateIdoTokensBought(
+          new anchor.BN("250000000")
+        )
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
+          user: provider.wallet.publicKey,
+        })
+        .view();
+    } catch (error) {
+      console.log(error);
+    }
+    expect(String(returnData)).to.equal("625000000000000000000");
   });
 
   it("Should throw error while adding fund to the program address", async function () {
@@ -223,43 +284,6 @@ describe("solana-mangamon-sale", () => {
     }
     expect((await program.account.authorizedSaleAccount
       .fetch(authorizedSaleAccount.publicKey)).isFundingCanceled).to.equal(true);
-  });
-
-  it("Should calculates how much Payment tokens needed to acquire IDO token allocation", async function () {
-    try {
-      const returnData = await program.methods
-        .calculateMaxPaymentToken(
-          new anchor.BN("10000000000000000")
-        )
-        .accounts({
-          authorizedSaleAccount: authorizedSaleAccount.publicKey,
-          saleAccount: saleAccount.publicKey,
-          user: provider.wallet.publicKey,
-        })
-        .view();
-      expect(returnData.toNumber()).to.equal(4000);
-    } catch (error) {
-      console.log(error);
-    }
-  });
-
-  it("Should calculate the amount of Ido Tokens bought", async function () {
-    let returnData: any;
-    try {
-      returnData = await program.methods
-        .calculateIdoTokensBought(
-          new anchor.BN("250000000")
-        )
-        .accounts({
-          authorizedSaleAccount: authorizedSaleAccount.publicKey,
-          saleAccount: saleAccount.publicKey,
-          user: provider.wallet.publicKey,
-        })
-        .view();
-    } catch (error) {
-      console.log(error);
-    }
-    expect(String(returnData)).to.equal("625000000000000000000");
   });
 
   it("Should check if user can claim payed token if funding is canceled", async function () {
