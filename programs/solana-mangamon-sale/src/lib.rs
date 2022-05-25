@@ -235,6 +235,7 @@ pub mod solana_mangamon_sale {
     }
     /// Let users claim his payed tokens if ido sale is canceled
     pub fn claim_payed_tokens_on_ido_cancel(ctx: Context<UpdateBuyerInfo>) -> Result<()> {
+        ctx.accounts.is_funding_canceled_by_admin();
         let buyer_info = &mut ctx.accounts.buyer_info;
         assert_eq!(
             buyer_info.has_claimed_pay_tokens, false,
@@ -337,6 +338,16 @@ pub struct UpdateBuyerInfo<'info> {
     pub user: Signer<'info>,
     #[account(mut, seeds = [b"buyer-info", user.key().as_ref()], bump = buyer_info.bump)]
     pub buyer_info: Account<'info, BuyerInfo>,
+    pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
+}
+impl<'info> UpdateBuyerInfo<'info> {
+    pub fn is_funding_canceled_by_admin(&self) -> bool {
+        assert!(
+            self.authorized_sale_account.is_funding_canceled,
+            "Funding has not been canceled"
+        );
+        true
+    }
 }
 
 // Accouunts
