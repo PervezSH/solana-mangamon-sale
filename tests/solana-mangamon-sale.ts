@@ -263,6 +263,57 @@ describe("solana-mangamon-sale", () => {
     expect(String(returnData)).to.equal("0");
   });
 
+  // Checks
+  it("Should check if the Funding has started and has not ended", async function () {
+    let returnData: boolean;
+    try {
+      returnData = await program.methods
+        .isFundingOpen()
+        .accounts({
+          user: provider.wallet.publicKey,
+          saleAccount: saleAccount.publicKey,
+          authorizedSaleAccount: authorizedSaleAccount.publicKey
+        })
+        .view();
+    } catch (error) {
+      console.log(error);
+    }
+    expect(returnData).to.equal(true);
+  });
+
+  it("Should check if the current date is pre-funding", async function () {
+    let returnData: boolean;
+    try {
+      returnData = await program.methods
+        .isPreStartFunding()
+        .accounts({
+          user: provider.wallet.publicKey,
+          saleAccount: saleAccount.publicKey,
+          authorizedSaleAccount: authorizedSaleAccount.publicKey
+        })
+        .view();
+    } catch (error) {
+      console.log(error);
+    }
+    expect(returnData).to.equal(false);
+  });
+  it("Should check if the Funding period has ended", async function () {
+    let returnData: boolean;
+    try {
+      returnData = await program.methods
+        .isFundingEnded()
+        .accounts({
+          user: provider.wallet.publicKey,
+          saleAccount: saleAccount.publicKey,
+          authorizedSaleAccount: authorizedSaleAccount.publicKey
+        })
+        .view();
+    } catch (error) {
+      console.log(error);
+    }
+    expect(returnData).to.equal(false);
+  });
+
   // Business Logic
   it("Should calculates how much Payment tokens needed to acquire IDO token allocation", async function () {
     try {
