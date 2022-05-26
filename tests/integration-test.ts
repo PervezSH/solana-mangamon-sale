@@ -44,6 +44,27 @@ async function initializateAccount() {
         .rpc();
 }
 
+async function createPDA(_buyer: PublicKey) {
+    const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+        [
+            anchor.utils.bytes.utf8.encode("buyer-info"),
+            _buyer.toBuffer()
+        ],
+        program.programId
+    );
+    await program.methods
+        .creatBuyerInfo(
+            new anchor.BN(0),
+            new anchor.BN(0),
+        )
+        .accounts({
+            user: provider.wallet.publicKey,
+            buyerInfo: buyerInfoPDA,
+        })
+        .rpc();
+    return buyerInfoPDA
+}
+
 describe("solana-mangamon-sale", () => {
     before(async function () {
         try {
@@ -82,6 +103,22 @@ describe("solana-mangamon-sale", () => {
                 .fetch(authorizedSaleAccount.publicKey)).inOneTransaction).to.equal(false);
             expect((await program.account.authorizedSaleAccount
                 .fetch(authorizedSaleAccount.publicKey)).isClaimingOpen).to.equal(false);
+        });
+        it("Should create PDA for a buyer and initialized its field!", async function () {
+            let buyerInfoPDA: PublicKey;
+            try {
+                buyerInfoPDA = await createPDA(provider.wallet.publicKey);
+            } catch (error) {
+                console.log(error)
+            }
+            expect((await program.account.buyerInfo
+                .fetch(buyerInfoPDA)).spendPayTokens.toNumber()).to.equal(0);
+            expect((await program.account.buyerInfo
+                .fetch(buyerInfoPDA)).idoTokensToGet.toNumber()).to.equal(0);
+            expect((await program.account.buyerInfo
+                .fetch(buyerInfoPDA)).idoTokensClaimed.toNumber()).to.equal(0);
+            expect((await program.account.buyerInfo
+                .fetch(buyerInfoPDA)).hasClaimedPayTokens).to.equal(false);
         });
     });
 });
