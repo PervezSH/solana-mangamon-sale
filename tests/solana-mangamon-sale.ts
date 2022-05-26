@@ -104,6 +104,7 @@ describe("solana-mangamon-sale", () => {
       .setInitialPercentageAllocationIdoTokens(20)
       .accounts({
         authorizedSaleAccount: authorizedSaleAccount.publicKey,
+        saleAccount: saleAccount.publicKey,
         admin: provider.wallet.publicKey,
       })
       .rpc();
@@ -120,6 +121,7 @@ describe("solana-mangamon-sale", () => {
         )
         .accounts({
           authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
           admin: provider.wallet.publicKey,
         })
         .rpc();
@@ -141,6 +143,7 @@ describe("solana-mangamon-sale", () => {
         )
         .accounts({
           authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
           admin: provider.wallet.publicKey,
         })
         .rpc();
@@ -332,6 +335,7 @@ describe("solana-mangamon-sale", () => {
         .cancelIdoSale()
         .accounts({
           authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
           admin: provider.wallet.publicKey,
         })
         .rpc();
@@ -435,6 +439,7 @@ describe("solana-mangamon-sale", () => {
         .cancelIdoSale()
         .accounts({
           authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
           admin: provider.wallet.publicKey,
         })
         .rpc();

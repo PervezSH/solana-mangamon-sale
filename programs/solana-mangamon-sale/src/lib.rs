@@ -80,7 +80,7 @@ pub mod solana_mangamon_sale {
     // Setters
     /// Change the initial percentage of token allocation to be claimed
     pub fn set_initial_percentage_allocation_ido_tokens(
-        ctx: Context<UpdateAuhorizedSaleAccount>,
+        ctx: Context<AdminOnlyUpdate>,
         _percentage: u8,
     ) -> Result<()> {
         let authorized_sale_account = &mut ctx.accounts.authorized_sale_account;
@@ -107,7 +107,7 @@ pub mod solana_mangamon_sale {
     }
     /// Set if the claiming is enabled or not
     pub fn enable_claiming(
-        ctx: Context<UpdateAuhorizedSaleAccount>,
+        ctx: Context<AdminOnlyUpdate>,
         _is_claiming_open: bool,
         _start_date_of_claiming_tokens: i64,
     ) -> Result<()> {
@@ -126,7 +126,7 @@ pub mod solana_mangamon_sale {
     }
     /// Set the end date for tokens to be claimed by all buyers
     pub fn set_end_date_of_claiming_tokens(
-        ctx: Context<UpdateAuhorizedSaleAccount>,
+        ctx: Context<AdminOnlyUpdate>,
         _end_date_of_claiming_tokens: i64,
     ) -> Result<()> {
         let authorized_sale_account = &mut ctx.accounts.authorized_sale_account;
@@ -302,7 +302,7 @@ pub mod solana_mangamon_sale {
     }
     /// Give the programAddress the ido tokens to be sold
     pub fn fund_to_contract(
-        ctx: Context<UpdateBothSaleAccount>,
+        ctx: Context<AdminOnlyUpdate>,
         _amount_in_ido_tokens: u128,
     ) -> Result<()> {
         assert!(ctx.accounts.is_funding_closed());
@@ -498,7 +498,7 @@ pub mod solana_mangamon_sale {
     }
     /// Withdraw Pay Tokens from contract Only withdraw Pay tokens after the funding has ended
     pub fn withdraw_pay_tokens(
-        ctx: Context<UpdateBothSaleAccount>,
+        ctx: Context<AdminOnlyUpdate>,
         _pay_tokens_to_withdraw: u128,
     ) -> Result<()> {
         assert!(ctx.accounts.is_funding_closed());
@@ -507,7 +507,7 @@ pub mod solana_mangamon_sale {
     }
     /// Withdraw unsold IDO tokens
     pub fn withdraw_unsold_ido_tokens(
-        ctx: Context<UpdateBothSaleAccount>,
+        ctx: Context<AdminOnlyUpdate>,
         _ido_tokens_to_withdraw: u128,
     ) -> Result<()> {
         assert!(ctx.accounts.is_funding_closed());
@@ -515,7 +515,7 @@ pub mod solana_mangamon_sale {
         Ok(())
     }
     /// Cancels the entire sale
-    pub fn cancel_ido_sale(ctx: Context<UpdateAuhorizedSaleAccount>) -> Result<()> {
+    pub fn cancel_ido_sale(ctx: Context<AdminOnlyUpdate>) -> Result<()> {
         let authorized_sale_account = &mut ctx.accounts.authorized_sale_account;
         authorized_sale_account.is_funding_canceled = true;
         Ok(())
@@ -565,24 +565,16 @@ pub struct CreatBuyerInfo<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// Validation struct for updating fields of AuthorizedSaleAccount
+/// Validation struct for updating fields by admin only
 #[derive(Accounts)]
-pub struct UpdateAuhorizedSaleAccount<'info> {
-    #[account(mut, has_one = admin)]
-    pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
-    pub admin: Signer<'info>,
-}
-
-/// Validation struct for updating fields of both AuthorizedSaleAccount and SaleAccount
-#[derive(Accounts)]
-pub struct UpdateBothSaleAccount<'info> {
+pub struct AdminOnlyUpdate<'info> {
     #[account(mut, has_one = admin)]
     pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
     #[account(mut)]
     pub sale_account: Account<'info, SaleAccount>,
     pub admin: Signer<'info>,
 }
-impl<'info> UpdateBothSaleAccount<'info> {
+impl<'info> AdminOnlyUpdate<'info> {
     /// Check if the Funding has ended
     pub fn is_funding_closed(&self) -> bool {
         let now_ts = Clock::get().unwrap().unix_timestamp;
