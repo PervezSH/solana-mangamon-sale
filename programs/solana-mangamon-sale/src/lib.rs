@@ -186,9 +186,19 @@ pub mod solana_mangamon_sale {
     ) -> Result<u128> {
         let buyer_info = &ctx.accounts.buyer_info;
         let authorized_sale_account = &ctx.accounts.authorized_sale_account;
-        let initial_tokens_to_get = ctx
-            .accounts
-            .calculate_ido_tokens_bought(ctx.accounts.buyer_info.spend_pay_tokens);
+        let initial_tokens_to_get = calculate_ido_tokens_bought(
+            Context::new(
+                &crate::id(),
+                &mut ReadAccounts {
+                    authorized_sale_account: ctx.accounts.authorized_sale_account.clone(),
+                    sale_account: ctx.accounts.sale_account.clone(),
+                    user: ctx.accounts.user.clone(),
+                },
+                &[],
+                std::collections::BTreeMap::new(),
+            ),
+            ctx.accounts.buyer_info.spend_pay_tokens,
+        )?;
 
         let _seconds_in_total_between_start_and_end_date_claiming_tokens = authorized_sale_account
             .end_date_of_claiming_tokens
@@ -452,10 +462,32 @@ pub mod solana_mangamon_sale {
         ctx.accounts.is_funding_not_canceled_by_admin();
         // todo: isLotteryPlayedAndAllocationCalculated
 
-        let is_buyer = ctx.accounts.is_buyer(*ctx.accounts.user.key);
-        let initial_tokens_to_get = ctx
-            .accounts
-            .calculate_ido_tokens_bought(ctx.accounts.buyer_info.spend_pay_tokens);
+        let is_buyer = is_buyer(
+            Context::new(
+                &crate::id(),
+                &mut ReadAccounts {
+                    authorized_sale_account: ctx.accounts.authorized_sale_account.clone(),
+                    sale_account: ctx.accounts.sale_account.clone(),
+                    user: ctx.accounts.user.clone(),
+                },
+                &[],
+                std::collections::BTreeMap::new(),
+            ),
+            *ctx.accounts.user.key,
+        )?;
+        let initial_tokens_to_get = calculate_ido_tokens_bought(
+            Context::new(
+                &crate::id(),
+                &mut ReadAccounts {
+                    authorized_sale_account: ctx.accounts.authorized_sale_account.clone(),
+                    sale_account: ctx.accounts.sale_account.clone(),
+                    user: ctx.accounts.user.clone(),
+                },
+                &[],
+                std::collections::BTreeMap::new(),
+            ),
+            ctx.accounts.buyer_info.spend_pay_tokens,
+        )?;
 
         let authorized_sale_account = &ctx.accounts.authorized_sale_account;
         assert!(
