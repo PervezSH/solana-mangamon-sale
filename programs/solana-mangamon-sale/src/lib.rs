@@ -691,7 +691,6 @@ pub struct BuyersOnlyUpdate<'info> {
     pub user: Signer<'info>,
 }
 impl<'info> BuyersOnlyUpdate<'info> {
-    // Checks
     /// Check if the Funding period is open
     pub fn is_funding_open_and_running(&self) -> bool {
         let now_ts = Clock::get().unwrap().unix_timestamp;
@@ -737,45 +736,6 @@ impl<'info> BuyersOnlyUpdate<'info> {
         }
         false
     }
-    // Calculations
-    /// Calculates how much Payment tokens needed to acquire IDO token allocation
-    pub fn calculate_max_payment_token(&self, _ido_tokens_to_get: u128) -> u128 {
-        let authorized_sale_account = &self.authorized_sale_account;
-
-        let ido_token_decimal: u128 = 10u128.checked_pow(18 - 2).unwrap();
-        let pay_token_token_decimal: u128 = 10u128.checked_pow(6 - 2).unwrap();
-
-        let _ido_tokens_to_get: u128 = _ido_tokens_to_get.checked_div(ido_token_decimal).unwrap(); // 10000000000000000 / 10 ^ 16 = 1
-
-        let ido_token_price_ratio = authorized_sale_account.ido_token_price_ratio as u128;
-        let _divide_by_ratio = ido_token_price_ratio
-            .checked_mul(pay_token_token_decimal)
-            .unwrap(); // (4 * 10 ^ 3) * 10 ^ 4 = 4 * 10 ^ 7
-
-        let mut _amount_in_pay_token = (_ido_tokens_to_get).checked_mul(_divide_by_ratio).unwrap(); // 1 * 4 * 10 ^ 7 = 4 * 10 ^ 7
-        let ido_token_price_multiplier = authorized_sale_account.ido_token_price_multiplier as u128;
-        _amount_in_pay_token = _amount_in_pay_token
-            .checked_div(ido_token_price_multiplier)
-            .unwrap(); // (4 * 10 ^ 7) / 10 ^ 4 = 4 * 10 ^ 3 USDC tokens
-        _amount_in_pay_token
-    }
-    /// Calculate the amount of Ido Tokens bought
-    pub fn calculate_ido_tokens_bought(&self, _amount_in_pay_token: u128) -> u128 {
-        let authorized_sale_account = &self.authorized_sale_account;
-
-        let ido_token_decimal: u128 = 10u128.checked_pow(18 - 2).unwrap();
-        let pay_token_token_decimal: u128 = 10u128.checked_pow(6 - 2).unwrap();
-
-        let _amount_in_pay_token = _amount_in_pay_token
-            .checked_mul(authorized_sale_account.ido_token_price_multiplier as u128)
-            .unwrap(); // 250_000_000 * 10_000 = 2_500_000_000_000
-        let _divide_by_ratio = (authorized_sale_account.ido_token_price_ratio as u128)
-            .checked_mul(pay_token_token_decimal)
-            .unwrap(); // 4_000 * 10_000 = 40_000_000
-        let mut _ido_tokens_to_get = _amount_in_pay_token.checked_div(_divide_by_ratio).unwrap(); // 2_500_000_000_000 / 40_000_000 = 62_500
-        _ido_tokens_to_get = _ido_tokens_to_get.checked_mul(ido_token_decimal).unwrap(); // 62_500 * 10_000_000_000_000_000 = 625_000_000_000_000_000_000
-        _ido_tokens_to_get
-    }
 }
 
 /// Validation struct for reading fields of both SaleAccount and AuthorizedSaleAccount
@@ -795,25 +755,6 @@ pub struct ReadBuyerInfoAndAccounts<'info> {
     pub buyer_info: Account<'info, BuyerInfo>,
     pub sale_account: Account<'info, SaleAccount>,
     pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
-}
-impl<'info> ReadBuyerInfoAndAccounts<'info> {
-    /// Calculate the amount of Ido Tokens bought
-    pub fn calculate_ido_tokens_bought(&self, _amount_in_pay_token: u128) -> u128 {
-        let authorized_sale_account = &self.authorized_sale_account;
-
-        let ido_token_decimal: u128 = 10u128.checked_pow(18 - 2).unwrap();
-        let pay_token_token_decimal: u128 = 10u128.checked_pow(6 - 2).unwrap();
-
-        let _amount_in_pay_token = _amount_in_pay_token
-            .checked_mul(authorized_sale_account.ido_token_price_multiplier as u128)
-            .unwrap(); // 250_000_000 * 10_000 = 2_500_000_000_000
-        let _divide_by_ratio = (authorized_sale_account.ido_token_price_ratio as u128)
-            .checked_mul(pay_token_token_decimal)
-            .unwrap(); // 4_000 * 10_000 = 40_000_000
-        let mut _ido_tokens_to_get = _amount_in_pay_token.checked_div(_divide_by_ratio).unwrap(); // 2_500_000_000_000 / 40_000_000 = 62_500
-        _ido_tokens_to_get = _ido_tokens_to_get.checked_mul(ido_token_decimal).unwrap(); // 62_500 * 10_000_000_000_000_000 = 625_000_000_000_000_000_000
-        _ido_tokens_to_get
-    }
 }
 
 // Accouunts
