@@ -15,6 +15,10 @@ pub mod solana_mangamon_sale {
         _claiming_initial_percentage: u8,
         _in_one_transaction: bool,
     ) -> Result<()> {
+        assert!(
+            _start_date_funding < _end_date_funding,
+            "The starting date of the funding should be before the end date of the funding"
+        );
         // Get a mutable reference to the accounts
         let authorized_sale_account = &mut ctx.accounts.authorized_sale_account;
         let sale_account = &mut ctx.accounts.sale_account;
