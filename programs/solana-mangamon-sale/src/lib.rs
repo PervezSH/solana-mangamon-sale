@@ -64,7 +64,6 @@ pub mod solana_mangamon_sale {
         _spend_pay_tokens: u128,
         _ido_tokens_to_get: u128,
     ) -> Result<()> {
-        println!("I'm in");
         let buyer_info = &mut ctx.accounts.buyer_info;
         buyer_info.spend_pay_tokens = _spend_pay_tokens;
         buyer_info.ido_tokens_to_get = _ido_tokens_to_get;
@@ -290,6 +289,110 @@ pub mod solana_mangamon_sale {
         });
         Ok(())
     }
+    /// After the Funding period, users are allowed to claim their IDO Tokens
+    pub fn claim_tokens(ctx: Context<USaleBuyerInfoWRefAuthSaleAccount>) -> Result<()> {
+        ctx.accounts.is_funding_closed();
+        ctx.accounts.is_funding_not_canceled_by_admin();
+        // isLotteryPlayedAndAllocationCalculated
+
+        let is_buyer = ctx.accounts.is_buyer(*ctx.accounts.user.key);
+        let initial_tokens_to_get = ctx
+            .accounts
+            .calculate_ido_tokens_bought(ctx.accounts.buyer_info.spend_pay_tokens);
+
+        let authorized_sale_account = &ctx.accounts.authorized_sale_account;
+        assert!(
+            authorized_sale_account.is_ido_token_funded_to_contract,
+            "Tokens have not been added to the contract YET"
+        );
+        let buyer_info = &mut ctx.accounts.buyer_info;
+        assert!(
+            buyer_info.ido_tokens_claimed < buyer_info.ido_tokens_to_get,
+            "You have already claimed the tokens"
+        );
+        assert!(
+            authorized_sale_account.is_claiming_open,
+            "Cannot claim, you need to wait until claiming is enabled"
+        );
+        assert!(is_buyer, "You are not a buyer");
+
+        let _seconds_in_total_between_start_and_end_date_claiming_tokens = authorized_sale_account
+            .end_date_of_claiming_tokens
+            .checked_sub(authorized_sale_account.start_date_of_claiming_tokens)
+            .unwrap();
+        let mut _ido_tokens_per_second = buyer_info
+            .ido_tokens_to_get
+            .checked_div(_seconds_in_total_between_start_and_end_date_claiming_tokens as u128)
+            .unwrap();
+        let mut _total_tokens_to_get = 0u128;
+
+        // Allocate all the tokens, if current time already surpassed the endDateOfClaimingTokens
+        if Clock::get().unwrap().unix_timestamp
+            > authorized_sale_account.end_date_of_claiming_tokens
+        {
+            _total_tokens_to_get = buyer_info.ido_tokens_to_get;
+        } else if authorized_sale_account.initial_percentage_allocation_ido_tokens > 0 {
+            // Calculates the _totalTokensToGet with this percentage
+            let _initial_tokens_to_get = initial_tokens_to_get
+                .checked_div(100)
+                .unwrap()
+                .checked_mul(
+                    authorized_sale_account.initial_percentage_allocation_ido_tokens as u128,
+                )
+                .unwrap();
+            if Clock::get().unwrap().unix_timestamp
+                >= authorized_sale_account.start_date_of_claiming_tokens
+            {
+                // Removes the initial tokes to get from the total supply tokens to get percentage
+                _ido_tokens_per_second = buyer_info
+                    .ido_tokens_to_get
+                    .checked_sub(_initial_tokens_to_get)
+                    .unwrap()
+                    .checked_div(
+                        _seconds_in_total_between_start_and_end_date_claiming_tokens as u128,
+                    )
+                    .unwrap();
+                // Calculate how many tokens to get since startDateOfClaimingTokens
+                let _seconds_passed_since_start = Clock::get()
+                    .unwrap()
+                    .unix_timestamp
+                    .checked_sub(authorized_sale_account.start_date_of_claiming_tokens)
+                    .unwrap();
+                _total_tokens_to_get = _ido_tokens_per_second
+                    .checked_mul(_seconds_passed_since_start as u128)
+                    .unwrap();
+            }
+            // Add the initial tokens to get to the tokens that can be claimed
+            _total_tokens_to_get = _total_tokens_to_get
+                .checked_add(_initial_tokens_to_get)
+                .unwrap();
+        } else {
+            // End date has not yet been reached
+            let _seconds_passed_since_start = Clock::get()
+                .unwrap()
+                .unix_timestamp
+                .checked_sub(authorized_sale_account.start_date_of_claiming_tokens)
+                .unwrap();
+            _total_tokens_to_get = _ido_tokens_per_second
+                .checked_mul(_seconds_passed_since_start as u128)
+                .unwrap();
+        }
+        // Subtract previous already claimed tokens
+        _total_tokens_to_get = _total_tokens_to_get
+            .checked_sub(buyer_info.ido_tokens_claimed)
+            .unwrap();
+        // transfer the idoTokens to the msg.sender from the contract
+        // Update mapping
+        buyer_info.ido_tokens_claimed = buyer_info
+            .ido_tokens_claimed
+            .checked_add(_total_tokens_to_get)
+            .unwrap();
+        emit!(ClaimedIDOTokens {
+            buyer: *ctx.accounts.user.key,
+            ido_tokens_to_get: _total_tokens_to_get
+        });
+        Ok(())
+    }
     /// Withdraw Pay Tokens from contract Only withdraw Pay tokens after the funding has ended
     pub fn withdraw_pay_tokens(
         ctx: Context<UpdateBothSaleAccount>,
@@ -423,6 +526,23 @@ impl<'info> USaleBuyerInfoWRefAuthSaleAccount<'info> {
         assert_eq!(
             self.authorized_sale_account.is_funding_canceled, true,
             "Funding has not been canceled"
+        );
+        true
+    }
+    /// Check if the Funding has ended
+    pub fn is_funding_closed(&self) -> bool {
+        let now_ts = Clock::get().unwrap().unix_timestamp;
+        assert!(
+            now_ts > self.authorized_sale_account.end_date_funding,
+            "The Funding Period has not ended"
+        );
+        true
+    }
+    /// Check if the Funding has not been canceled
+    pub fn is_funding_not_canceled_by_admin(&self) -> bool {
+        assert_eq!(
+            self.authorized_sale_account.is_funding_canceled, false,
+            "Funding has been canceled"
         );
         true
     }
