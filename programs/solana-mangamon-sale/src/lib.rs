@@ -161,7 +161,7 @@ pub mod solana_mangamon_sale {
     }
     /// Get total tokens bought by msg.sender, and total tokens spent
     pub fn get_total_ido_tokens_bought_and_pay_tokens_spend(
-        ctx: Context<ReadSaleAndBuyerAccount>,
+        ctx: Context<ReadAccounts>,
         _buyer: Pubkey,
     ) -> Result<Vec<u128>> {
         let buyer_info = &ctx.accounts.buyer_info;
@@ -178,6 +178,81 @@ pub mod solana_mangamon_sale {
             sale_account.total_allocated_ido_tokens,
             sale_account.total_spend_pay_tokens,
         ])
+    }
+    /// Returns the claimable tokens at this point in time
+    pub fn get_claimable_tokens(ctx: Context<ReadAccounts>, _buyer: Pubkey) -> Result<u128> {
+        let buyer_info = &ctx.accounts.buyer_info;
+        let authorized_sale_account = &ctx.accounts.authorized_sale_account;
+        let initial_tokens_to_get = ctx
+            .accounts
+            .calculate_ido_tokens_bought(ctx.accounts.buyer_info.spend_pay_tokens);
+
+        let _seconds_in_total_between_start_and_end_date_claiming_tokens = authorized_sale_account
+            .end_date_of_claiming_tokens
+            .checked_sub(authorized_sale_account.start_date_of_claiming_tokens)
+            .unwrap();
+        let mut _ido_tokens_per_second = buyer_info
+            .ido_tokens_to_get
+            .checked_div(_seconds_in_total_between_start_and_end_date_claiming_tokens as u128)
+            .unwrap();
+        let mut _total_tokens_to_get = 0u128;
+
+        // Allocate all the tokens, if current time already surpassed the endDateOfClaimingTokens
+        if Clock::get().unwrap().unix_timestamp
+            > authorized_sale_account.end_date_of_claiming_tokens
+        {
+            _total_tokens_to_get = buyer_info.ido_tokens_to_get;
+        } else if authorized_sale_account.initial_percentage_allocation_ido_tokens > 0 {
+            // Calculates the _totalTokensToGet with this percentage
+            let _initial_tokens_to_get = initial_tokens_to_get
+                .checked_div(100)
+                .unwrap()
+                .checked_mul(
+                    authorized_sale_account.initial_percentage_allocation_ido_tokens as u128,
+                )
+                .unwrap();
+            if Clock::get().unwrap().unix_timestamp
+                >= authorized_sale_account.start_date_of_claiming_tokens
+            {
+                // Removes the initial tokes to get from the total supply tokens to get percentage
+                _ido_tokens_per_second = buyer_info
+                    .ido_tokens_to_get
+                    .checked_sub(_initial_tokens_to_get)
+                    .unwrap()
+                    .checked_div(
+                        _seconds_in_total_between_start_and_end_date_claiming_tokens as u128,
+                    )
+                    .unwrap();
+                // Calculate how many tokens to get since startDateOfClaimingTokens
+                let _seconds_passed_since_start = Clock::get()
+                    .unwrap()
+                    .unix_timestamp
+                    .checked_sub(authorized_sale_account.start_date_of_claiming_tokens)
+                    .unwrap();
+                _total_tokens_to_get = _ido_tokens_per_second
+                    .checked_mul(_seconds_passed_since_start as u128)
+                    .unwrap();
+            }
+            // Add the initial tokens to get to the tokens that can be claimed
+            _total_tokens_to_get = _total_tokens_to_get
+                .checked_add(_initial_tokens_to_get)
+                .unwrap();
+        } else {
+            // End date has not yet been reached
+            let _seconds_passed_since_start = Clock::get()
+                .unwrap()
+                .unix_timestamp
+                .checked_sub(authorized_sale_account.start_date_of_claiming_tokens)
+                .unwrap();
+            _total_tokens_to_get = _ido_tokens_per_second
+                .checked_mul(_seconds_passed_since_start as u128)
+                .unwrap();
+        }
+        // Subtract previous already claimed tokens
+        _total_tokens_to_get = _total_tokens_to_get
+            .checked_sub(buyer_info.ido_tokens_claimed)
+            .unwrap();
+        Ok(_total_tokens_to_get)
     }
 
     // BusinessLogic
@@ -654,11 +729,31 @@ impl<'info> UpdateBuyerInfo<'info> {
 /// Validation struct for reading buyer's info and sale account
 #[derive(Accounts)]
 #[instruction(_buyer: Pubkey)]
-pub struct ReadSaleAndBuyerAccount<'info> {
+pub struct ReadAccounts<'info> {
     pub user: Signer<'info>,
     #[account(seeds = [b"buyer-info", _buyer.as_ref()], bump = buyer_info.bump)]
     pub buyer_info: Account<'info, BuyerInfo>,
     pub sale_account: Account<'info, SaleAccount>,
+    pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
+}
+impl<'info> ReadAccounts<'info> {
+    /// Calculate the amount of Ido Tokens bought
+    pub fn calculate_ido_tokens_bought(&self, _amount_in_pay_token: u128) -> u128 {
+        let authorized_sale_account = &self.authorized_sale_account;
+
+        let ido_token_decimal: u128 = 10u128.checked_pow(18 - 2).unwrap();
+        let pay_token_token_decimal: u128 = 10u128.checked_pow(6 - 2).unwrap();
+
+        let _amount_in_pay_token = _amount_in_pay_token
+            .checked_mul(authorized_sale_account.ido_token_price_multiplier as u128)
+            .unwrap(); // 250_000_000 * 10_000 = 2_500_000_000_000
+        let _divide_by_ratio = (authorized_sale_account.ido_token_price_ratio as u128)
+            .checked_mul(pay_token_token_decimal)
+            .unwrap(); // 4_000 * 10_000 = 40_000_000
+        let mut _ido_tokens_to_get = _amount_in_pay_token.checked_div(_divide_by_ratio).unwrap(); // 2_500_000_000_000 / 40_000_000 = 62_500
+        _ido_tokens_to_get = _ido_tokens_to_get.checked_mul(ido_token_decimal).unwrap(); // 62_500 * 10_000_000_000_000_000 = 625_000_000_000_000_000_000
+        _ido_tokens_to_get
+    }
 }
 
 // Accouunts
