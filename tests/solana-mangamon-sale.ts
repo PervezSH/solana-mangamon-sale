@@ -207,6 +207,7 @@ describe("solana-mangamon-sale", () => {
           user: provider.wallet.publicKey,
           buyerInfo: buyerInfoPDA,
           saleAccount: saleAccount.publicKey,
+          authorizedSaleAccount: authorizedSaleAccount.publicKey
         })
         .view();
     } catch (error) {
@@ -230,6 +231,33 @@ describe("solana-mangamon-sale", () => {
       console.log(error);
     }
     expect(String(returnData)).to.equal("0,0");
+  });
+
+  it("Should return the claimable tokens at this point in time for a user", async function () {
+    const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+      [
+        anchor.utils.bytes.utf8.encode("buyer-info"),
+        provider.wallet.publicKey.toBuffer()
+      ],
+      program.programId
+    );
+    let returnData: any;
+    try {
+      returnData = await program.methods
+        .getClaimableTokens(
+          provider.wallet.publicKey
+        )
+        .accounts({
+          user: provider.wallet.publicKey,
+          buyerInfo: buyerInfoPDA,
+          saleAccount: saleAccount.publicKey,
+          authorizedSaleAccount: authorizedSaleAccount.publicKey
+        })
+        .view();
+    } catch (error) {
+      console.log(error);
+    }
+    expect(String(returnData)).to.equal("0");
   });
 
   // Business Logic
