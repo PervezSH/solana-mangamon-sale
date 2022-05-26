@@ -146,11 +146,11 @@ pub mod solana_mangamon_sale {
 
     // Getters
     /// Returns a list of all buyers (wallet addresses)
-    pub fn get_buyers(ctx: Context<ReadBothSaleAccount>) -> Result<Vec<Pubkey>> {
+    pub fn get_buyers(ctx: Context<ReadAccounts>) -> Result<Vec<Pubkey>> {
         Ok(ctx.accounts.sale_account.buyers_list.clone())
     }
     /// Returns boolean of the wallet address when he is a buyer or not
-    pub fn is_buyer(ctx: Context<ReadBothSaleAccount>, _buyer: Pubkey) -> Result<bool> {
+    pub fn is_buyer(ctx: Context<ReadAccounts>, _buyer: Pubkey) -> Result<bool> {
         let buyers_list = &ctx.accounts.sale_account.buyers_list;
         for buyer in buyers_list {
             if buyer.to_bytes() == _buyer.to_bytes() {
@@ -161,7 +161,7 @@ pub mod solana_mangamon_sale {
     }
     /// Get total tokens bought by msg.sender, and total tokens spent
     pub fn get_total_ido_tokens_bought_and_pay_tokens_spend(
-        ctx: Context<ReadAccounts>,
+        ctx: Context<ReadBuyerInfoAndAccounts>,
         _buyer: Pubkey,
     ) -> Result<Vec<u128>> {
         let buyer_info = &ctx.accounts.buyer_info;
@@ -171,7 +171,7 @@ pub mod solana_mangamon_sale {
     }
     /// Get total tokens bought, and total tokens spent
     pub fn total_ido_tokens_bought_and_pay_tokens_spend(
-        ctx: Context<ReadBothSaleAccount>,
+        ctx: Context<ReadAccounts>,
     ) -> Result<Vec<u128>> {
         let sale_account = &ctx.accounts.sale_account;
         Ok(vec![
@@ -180,7 +180,10 @@ pub mod solana_mangamon_sale {
         ])
     }
     /// Returns the claimable tokens at this point in time
-    pub fn get_claimable_tokens(ctx: Context<ReadAccounts>, _buyer: Pubkey) -> Result<u128> {
+    pub fn get_claimable_tokens(
+        ctx: Context<ReadBuyerInfoAndAccounts>,
+        _buyer: Pubkey,
+    ) -> Result<u128> {
         let buyer_info = &ctx.accounts.buyer_info;
         let authorized_sale_account = &ctx.accounts.authorized_sale_account;
         let initial_tokens_to_get = ctx
@@ -258,7 +261,7 @@ pub mod solana_mangamon_sale {
     // BusinessLogic
     /// Calculates how much Payment tokens needed to acquire IDO token allocation
     pub fn calculate_max_payment_token(
-        ctx: Context<ReadBothSaleAccount>,
+        ctx: Context<ReadAccounts>,
         _ido_tokens_to_get: u128,
     ) -> Result<u128> {
         let authorized_sale_account = &ctx.accounts.authorized_sale_account;
@@ -282,7 +285,7 @@ pub mod solana_mangamon_sale {
     }
     /// Calculate the amount of Ido Tokens bought
     pub fn calculate_ido_tokens_bought(
-        ctx: Context<ReadBothSaleAccount>,
+        ctx: Context<ReadAccounts>,
         _amount_in_pay_token: u128,
     ) -> Result<u128> {
         let authorized_sale_account = &ctx.accounts.authorized_sale_account;
@@ -325,10 +328,7 @@ pub mod solana_mangamon_sale {
     }
     /// Buy Tokens, but not really, just transfer the payment tokens to the Contract
     /// and create a receipt that can later be claimed by the buyer
-    pub fn buy(
-        ctx: Context<USaleBuyerInfoWRefAuthSaleAccount>,
-        _amount_in_pay_token: u128,
-    ) -> Result<()> {
+    pub fn buy(ctx: Context<BuyersOnlyUpdate>, _amount_in_pay_token: u128) -> Result<()> {
         ctx.accounts.is_funding_open_and_running();
         ctx.accounts.is_funding_canceled_by_admin();
         // todo: isLotteryPlayedAndAllocationCalculated
@@ -393,7 +393,7 @@ pub mod solana_mangamon_sale {
         Ok(())
     }
     /// After the Funding period, users are allowed to claim their IDO Tokens
-    pub fn claim_tokens(ctx: Context<USaleBuyerInfoWRefAuthSaleAccount>) -> Result<()> {
+    pub fn claim_tokens(ctx: Context<BuyersOnlyUpdate>) -> Result<()> {
         ctx.accounts.is_funding_closed();
         ctx.accounts.is_funding_not_canceled_by_admin();
         // todo: isLotteryPlayedAndAllocationCalculated
@@ -521,7 +521,7 @@ pub mod solana_mangamon_sale {
         Ok(())
     }
     /// Let users claim his payed tokens if ido sale is canceled
-    pub fn claim_payed_tokens_on_ido_cancel(ctx: Context<UpdateBuyerInfo>) -> Result<()> {
+    pub fn claim_payed_tokens_on_ido_cancel(ctx: Context<BuyersOnlyUpdate>) -> Result<()> {
         ctx.accounts.is_funding_canceled_by_admin();
         let buyer_info = &mut ctx.accounts.buyer_info;
         assert_eq!(
@@ -594,9 +594,9 @@ impl<'info> AdminOnlyUpdate<'info> {
     }
 }
 
-/// Validation struct for updating fields of SaleAccount with reference to the AuthorizedSaleAccount
+/// Validation struct for updating fields of SaleAccount and Buyer's info with reference to the AuthorizedSaleAccount
 #[derive(Accounts)]
-pub struct USaleBuyerInfoWRefAuthSaleAccount<'info> {
+pub struct BuyersOnlyUpdate<'info> {
     pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
     #[account(mut)]
     pub sale_account: Account<'info, SaleAccount>,
@@ -604,7 +604,7 @@ pub struct USaleBuyerInfoWRefAuthSaleAccount<'info> {
     pub buyer_info: Account<'info, BuyerInfo>,
     pub user: Signer<'info>,
 }
-impl<'info> USaleBuyerInfoWRefAuthSaleAccount<'info> {
+impl<'info> BuyersOnlyUpdate<'info> {
     // Checks
     /// Check if the Funding period is open
     pub fn is_funding_open_and_running(&self) -> bool {
@@ -640,6 +640,16 @@ impl<'info> USaleBuyerInfoWRefAuthSaleAccount<'info> {
             "Funding has been canceled"
         );
         true
+    }
+    /// Checks if buyer's in buyer list
+    pub fn is_buyer(&self, _buyer: Pubkey) -> bool {
+        let buyers_list = &self.sale_account.buyers_list;
+        for buyer in buyers_list {
+            if buyer.to_bytes() == _buyer.to_bytes() {
+                return true;
+            }
+        }
+        false
     }
     // Calculations
     /// Calculates how much Payment tokens needed to acquire IDO token allocation
@@ -680,55 +690,27 @@ impl<'info> USaleBuyerInfoWRefAuthSaleAccount<'info> {
         _ido_tokens_to_get = _ido_tokens_to_get.checked_mul(ido_token_decimal).unwrap(); // 62_500 * 10_000_000_000_000_000 = 625_000_000_000_000_000_000
         _ido_tokens_to_get
     }
-    /// Checks if buyer's in buyer list
-    pub fn is_buyer(&self, _buyer: Pubkey) -> bool {
-        let buyers_list = &self.sale_account.buyers_list;
-        for buyer in buyers_list {
-            if buyer.to_bytes() == _buyer.to_bytes() {
-                return true;
-            }
-        }
-        false
-    }
 }
 
 /// Validation struct for reading fields of both SaleAccount and AuthorizedSaleAccount
 #[derive(Accounts)]
-pub struct ReadBothSaleAccount<'info> {
+pub struct ReadAccounts<'info> {
     pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
     pub sale_account: Account<'info, SaleAccount>,
     pub user: Signer<'info>,
 }
 
-/// Validation struct for updating buyer's info
-#[derive(Accounts)]
-pub struct UpdateBuyerInfo<'info> {
-    pub user: Signer<'info>,
-    #[account(mut, seeds = [b"buyer-info", user.key().as_ref()], bump = buyer_info.bump)]
-    pub buyer_info: Account<'info, BuyerInfo>,
-    pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
-}
-impl<'info> UpdateBuyerInfo<'info> {
-    pub fn is_funding_canceled_by_admin(&self) -> bool {
-        assert!(
-            self.authorized_sale_account.is_funding_canceled,
-            "Funding has not been canceled"
-        );
-        true
-    }
-}
-
-/// Validation struct for reading buyer's info and sale account
+/// Validation struct for reading buyer's info and all data fields (AuthorizedSaleAccount + SaleAccount)
 #[derive(Accounts)]
 #[instruction(_buyer: Pubkey)]
-pub struct ReadAccounts<'info> {
+pub struct ReadBuyerInfoAndAccounts<'info> {
     pub user: Signer<'info>,
     #[account(seeds = [b"buyer-info", _buyer.as_ref()], bump = buyer_info.bump)]
     pub buyer_info: Account<'info, BuyerInfo>,
     pub sale_account: Account<'info, SaleAccount>,
     pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
 }
-impl<'info> ReadAccounts<'info> {
+impl<'info> ReadBuyerInfoAndAccounts<'info> {
     /// Calculate the amount of Ido Tokens bought
     pub fn calculate_ido_tokens_bought(&self, _amount_in_pay_token: u128) -> u128 {
         let authorized_sale_account = &self.authorized_sale_account;

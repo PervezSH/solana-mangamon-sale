@@ -462,9 +462,10 @@ describe("solana-mangamon-sale", () => {
       await program.methods
         .claimPayedTokensOnIdoCancel()
         .accounts({
-          user: provider.wallet.publicKey,
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
           buyerInfo: buyerInfoPDA,
-          authorizedSaleAccount: authorizedSaleAccount.publicKey
+          user: provider.wallet.publicKey
         })
         .rpc();
     } catch (error) {
