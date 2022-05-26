@@ -145,6 +145,10 @@ pub mod solana_mangamon_sale {
     }
 
     // Getters
+    /// Returns a list of all buyers (wallet addresses)
+    pub fn get_buyers(ctx: Context<ReadBothSaleAccount>) -> Result<Vec<Pubkey>> {
+        Ok(ctx.accounts.sale_account.buyers_list.clone())
+    }
     /// Returns boolean of the wallet address when he is a buyer or not
     pub fn is_buyer(ctx: Context<ReadBothSaleAccount>, _buyer: Pubkey) -> Result<bool> {
         let buyers_list = &ctx.accounts.sale_account.buyers_list;
