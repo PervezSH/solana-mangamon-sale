@@ -152,6 +152,23 @@ describe("solana-mangamon-sale", () => {
   });
 
   // Getters
+  it("Should return list of all buyers", async function () {
+    let returnData: any;
+    try {
+      returnData = await program.methods
+        .getBuyers()
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
+          user: provider.wallet.publicKey
+        })
+        .view();
+    } catch (error) {
+      console.log(error);
+    }
+    expect(returnData.length).to.equal(0);
+  });
+
   it("Should check if the provided wallet address is buyer", async function () {
     let returnData: boolean;
     try {
