@@ -121,4 +121,44 @@ describe("solana-mangamon-sale", () => {
                 .fetch(buyerInfoPDA)).hasClaimedPayTokens).to.equal(false);
         });
     });
+    describe("#setters", function () {
+        describe("#setInitialPercentageAllocationIdoTokens()", function () {
+            let e: any;
+            it("Should change initial percentage of token allocation to 25!", async function () {
+                try {
+                    await program.methods
+                        .setInitialPercentageAllocationIdoTokens(
+                            25
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            admin: provider.wallet.publicKey
+                        })
+                        .rpc();
+                } catch (error) {
+                    e = error;
+                }
+                expect((await program.account.authorizedSaleAccount
+                    .fetch(authorizedSaleAccount.publicKey)).initialPercentageAllocationIdoTokens).to.equal(25);
+            });
+            it("Should throw error, as percentage can't be greater than 100!", async function () {
+                try {
+                    await program.methods
+                        .setInitialPercentageAllocationIdoTokens(
+                            120
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            admin: provider.wallet.publicKey
+                        })
+                        .rpc();
+                } catch (error) {
+                    e = error;
+                }
+                expect(JSON.stringify(e).includes("You cannot give more than 100 percent of the token allocation")).to.equal(true);
+            });
+        });
+    });
 });
