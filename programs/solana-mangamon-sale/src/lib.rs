@@ -159,6 +159,16 @@ pub mod solana_mangamon_sale {
         }
         Ok(false)
     }
+    /// Get total tokens bought by msg.sender, and total tokens spent
+    pub fn get_total_ido_tokens_bought_and_pay_tokens_spend(
+        ctx: Context<ReadSaleAndBuyerAccount>,
+        _buyer: Pubkey,
+    ) -> Result<Vec<u128>> {
+        let buyer_info = &ctx.accounts.buyer_info;
+        let _total_bought_ido_tokens = buyer_info.ido_tokens_to_get;
+        let _total_spend_pay_tokens = buyer_info.spend_pay_tokens;
+        Ok(vec![_total_bought_ido_tokens, _total_spend_pay_tokens])
+    }
 
     // BusinessLogic
     /// Calculates how much Payment tokens needed to acquire IDO token allocation
@@ -629,6 +639,16 @@ impl<'info> UpdateBuyerInfo<'info> {
         );
         true
     }
+}
+
+/// Validation struct for reading buyer's info and sale account
+#[derive(Accounts)]
+#[instruction(_buyer: Pubkey)]
+pub struct ReadSaleAndBuyerAccount<'info> {
+    pub user: Signer<'info>,
+    #[account(seeds = [b"buyer-info", _buyer.as_ref()], bump = buyer_info.bump)]
+    pub buyer_info: Account<'info, BuyerInfo>,
+    pub sale_account: Account<'info, SaleAccount>,
 }
 
 // Accouunts
