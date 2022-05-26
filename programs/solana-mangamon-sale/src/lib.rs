@@ -258,6 +258,26 @@ pub mod solana_mangamon_sale {
         Ok(_total_tokens_to_get)
     }
 
+    // Checks
+    /// Check if the Funding has started ans has not ended
+    pub fn is_funding_open(ctx: Context<ReadAccounts>) -> Result<bool> {
+        let is_open = Clock::get().unwrap().unix_timestamp
+            >= ctx.accounts.authorized_sale_account.start_date_funding
+            && Clock::get().unwrap().unix_timestamp
+                <= ctx.accounts.authorized_sale_account.end_date_funding;
+        Ok(is_open)
+    }
+    /// Check if the current date is pre-funding
+    pub fn is_pre_start_funding(ctx: Context<ReadAccounts>) -> Result<bool> {
+        Ok(Clock::get().unwrap().unix_timestamp
+            < ctx.accounts.authorized_sale_account.start_date_funding)
+    }
+    /// Check if the Funding period has ended
+    pub fn is_funding_ended(ctx: Context<ReadAccounts>) -> Result<bool> {
+        Ok(Clock::get().unwrap().unix_timestamp
+            > ctx.accounts.authorized_sale_account.end_date_funding)
+    }
+
     // BusinessLogic
     /// Calculates how much Payment tokens needed to acquire IDO token allocation
     pub fn calculate_max_payment_token(
