@@ -169,6 +169,16 @@ pub mod solana_mangamon_sale {
         let _total_spend_pay_tokens = buyer_info.spend_pay_tokens;
         Ok(vec![_total_bought_ido_tokens, _total_spend_pay_tokens])
     }
+    /// Get total tokens bought, and total tokens spent
+    pub fn total_ido_tokens_bought_and_pay_tokens_spend(
+        ctx: Context<ReadBothSaleAccount>,
+    ) -> Result<Vec<u128>> {
+        let sale_account = &ctx.accounts.sale_account;
+        Ok(vec![
+            sale_account.total_allocated_ido_tokens,
+            sale_account.total_spend_pay_tokens,
+        ])
+    }
 
     // BusinessLogic
     /// Calculates how much Payment tokens needed to acquire IDO token allocation
