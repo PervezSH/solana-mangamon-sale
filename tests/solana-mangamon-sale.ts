@@ -273,6 +273,34 @@ describe("solana-mangamon-sale", () => {
       .fetch(buyerInfoPDA)).idoTokensToGet)).to.equal("10000000000000000");
   });
 
+  it("should check if user can claim their IDO tokens after funding period", async function () {
+    let e: any;
+    const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+      [
+        anchor.utils.bytes.utf8.encode("buyer-info"),
+        provider.wallet.publicKey.toBuffer()
+      ],
+      program.programId
+    );
+    try {
+      await program.methods
+        .claimTokens()
+        .accounts({
+          authorizedSaleAccount: authorizedSaleAccount.publicKey,
+          saleAccount: saleAccount.publicKey,
+          buyerInfo: buyerInfoPDA,
+          user: provider.wallet.publicKey
+        })
+        .rpc();
+    } catch (error) {
+      e = error;
+    }
+    // expect(String((await program.account.buyerInfo
+    //   .fetch(buyerInfoPDA)).idoTokensClaimed)).to.equal("4000");
+    const stringifiedError = JSON.stringify(e);
+    expect(stringifiedError.includes("The Funding Period has not ended")).to.equal(true);
+  });
+
   it("Should throw error while withdrawing pay tokens", async function () {
     let e: any;
     try {
