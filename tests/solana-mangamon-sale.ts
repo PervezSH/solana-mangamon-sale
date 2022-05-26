@@ -189,6 +189,32 @@ describe("solana-mangamon-sale", () => {
     expect(returnData).to.equal(false);
   });
 
+  it("Should retrieve total tokens bought and spent by a user", async function () {
+    const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+      [
+        anchor.utils.bytes.utf8.encode("buyer-info"),
+        provider.wallet.publicKey.toBuffer()
+      ],
+      program.programId
+    );
+    let returnData: any;
+    try {
+      returnData = await program.methods
+        .getTotalIdoTokensBoughtAndPayTokensSpend(
+          provider.wallet.publicKey
+        )
+        .accounts({
+          user: provider.wallet.publicKey,
+          buyerInfo: buyerInfoPDA,
+          saleAccount: saleAccount.publicKey,
+        })
+        .view();
+    } catch (error) {
+      console.log(error);
+    }
+    expect(String(returnData)).to.equal("0,0");
+  });
+
   // Business Logic
   it("Should calculates how much Payment tokens needed to acquire IDO token allocation", async function () {
     try {
