@@ -218,8 +218,8 @@ pub mod solana_mangamon_sale {
             sale_account.total_allocated_ido_tokens <= _amount_in_ido_tokens,
             "You should at least match the totalAllocatedIdoTokens"
         );
-        // check if admin have enough tokens to fund to the contract
-        // transfer funds
+        // todo: check if admin have enough tokens to fund to the contract
+        // todo: transfer funds
         authorized_sale_account.tokens_for_sale = _amount_in_ido_tokens;
         authorized_sale_account.is_ido_token_funded_to_contract = true;
         Ok(())
@@ -232,16 +232,16 @@ pub mod solana_mangamon_sale {
     ) -> Result<()> {
         ctx.accounts.is_funding_open_and_running();
         ctx.accounts.is_funding_canceled_by_admin();
-        // isLotteryPlayedAndAllocationCalculated
-        // onlyWinners
-        let amount_in_pay_token = ctx.accounts.calculate_max_payment_token(10000000000000000); // data fron lottery contract
+        // todo: isLotteryPlayedAndAllocationCalculated
+        // todo: onlyWinners
+        let amount_in_pay_token = ctx.accounts.calculate_max_payment_token(10000000000000000); // todo: data fron lottery contract
         let ido_tokens_to_buy = ctx
             .accounts
             .calculate_ido_tokens_bought(_amount_in_pay_token);
         let is_buyer = ctx.accounts.is_buyer(*ctx.accounts.user.key);
 
         assert!(_amount_in_pay_token > 0, "Amount has to be positive");
-        // check user has enough pay tokens
+        // todo: check user has enough pay tokens
         assert!(_amount_in_pay_token <= amount_in_pay_token,
             "You cannot buy more tokens than is allowed according to your lottery allocation calculation"
         );
@@ -264,7 +264,7 @@ pub mod solana_mangamon_sale {
         if buyer_info.spend_pay_tokens == 0 {
             sale_account.investor_count = sale_account.investor_count.checked_add(1).unwrap();
         }
-        // get paid in pay tokens
+        // todo: get paid in pay tokens
         sale_account.total_spend_pay_tokens = sale_account
             .total_spend_pay_tokens
             .checked_add(_amount_in_pay_token)
@@ -297,7 +297,7 @@ pub mod solana_mangamon_sale {
     pub fn claim_tokens(ctx: Context<USaleBuyerInfoWRefAuthSaleAccount>) -> Result<()> {
         ctx.accounts.is_funding_closed();
         ctx.accounts.is_funding_not_canceled_by_admin();
-        // isLotteryPlayedAndAllocationCalculated
+        // todo: isLotteryPlayedAndAllocationCalculated
 
         let is_buyer = ctx.accounts.is_buyer(*ctx.accounts.user.key);
         let initial_tokens_to_get = ctx
@@ -385,7 +385,7 @@ pub mod solana_mangamon_sale {
         _total_tokens_to_get = _total_tokens_to_get
             .checked_sub(buyer_info.ido_tokens_claimed)
             .unwrap();
-        // transfer the idoTokens to the msg.sender from the contract
+        // todo: transfer the idoTokens to the msg.sender from the contract
         // Update mapping
         buyer_info.ido_tokens_claimed = buyer_info
             .ido_tokens_claimed
@@ -403,7 +403,7 @@ pub mod solana_mangamon_sale {
         _pay_tokens_to_withdraw: u128,
     ) -> Result<()> {
         assert!(ctx.accounts.is_funding_closed());
-        // withdraw pay tokens
+        // todo: withdraw pay tokens
         Ok(())
     }
     /// Withdraw unsold IDO tokens
@@ -412,7 +412,7 @@ pub mod solana_mangamon_sale {
         _ido_tokens_to_withdraw: u128,
     ) -> Result<()> {
         assert!(ctx.accounts.is_funding_closed());
-        // If IDO token is available, withdraw ido tokens
+        // todo: if IDO token is available, withdraw ido tokens
         Ok(())
     }
     /// Cancels the entire sale
@@ -430,10 +430,10 @@ pub mod solana_mangamon_sale {
             "You have been refunded already"
         );
         let _pay_tokens_to_return = buyer_info.spend_pay_tokens;
-        // update states
+        // Update states
         buyer_info.spend_pay_tokens = 0;
         buyer_info.has_claimed_pay_tokens = true;
-        // transfer pay tokens
+        // todo: transfer pay tokens
         Ok(())
     }
 }
