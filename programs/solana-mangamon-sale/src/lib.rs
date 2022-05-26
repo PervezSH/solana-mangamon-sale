@@ -221,6 +221,75 @@ pub mod solana_mangamon_sale {
         authorized_sale_account.is_ido_token_funded_to_contract = true;
         Ok(())
     }
+    /// Buy Tokens, but not really, just transfer the payment tokens to the Contract
+    /// and create a receipt that can later be claimed by the buyer
+    pub fn buy(
+        ctx: Context<USaleBuyerInfoWRefAuthSaleAccount>,
+        _amount_in_pay_token: u128,
+    ) -> Result<()> {
+        ctx.accounts.is_funding_open_and_running();
+        ctx.accounts.is_funding_canceled_by_admin();
+        // isLotteryPlayedAndAllocationCalculated
+        // onlyWinners
+        let amount_in_pay_token = ctx.accounts.calculate_max_payment_token(10000000000000000); // data fron lottery contract
+        let ido_tokens_to_buy = ctx
+            .accounts
+            .calculate_ido_tokens_bought(_amount_in_pay_token);
+        let is_buyer = ctx.accounts.is_buyer(*ctx.accounts.user.key);
+
+        assert!(_amount_in_pay_token > 0, "Amount has to be positive");
+        // check user has enough pay tokens
+        assert!(_amount_in_pay_token <= amount_in_pay_token,
+            "You cannot buy more tokens than is allowed according to your lottery allocation calculation"
+        );
+        let buyer_info = &mut ctx.accounts.buyer_info;
+        let final_spend_pay_tokens = buyer_info
+            .spend_pay_tokens
+            .checked_add(_amount_in_pay_token)
+            .unwrap();
+        assert!(final_spend_pay_tokens <= amount_in_pay_token,
+            "You cannot buy more tokens than is allowed according to your lottery allocation calculation"
+        );
+        let authorized_sale_account = &ctx.accounts.authorized_sale_account;
+        if authorized_sale_account.in_one_transaction {
+            assert!(
+                amount_in_pay_token == _amount_in_pay_token,
+                "You need to buy the entire allocation in one transaction"
+            );
+        }
+        let sale_account = &mut ctx.accounts.sale_account;
+        if buyer_info.spend_pay_tokens == 0 {
+            sale_account.investor_count = sale_account.investor_count.checked_add(1).unwrap();
+        }
+        // get paid in pay tokens
+        sale_account.total_spend_pay_tokens = sale_account
+            .total_spend_pay_tokens
+            .checked_add(_amount_in_pay_token)
+            .unwrap();
+        sale_account.total_allocated_ido_tokens = sale_account
+            .total_allocated_ido_tokens
+            .checked_add(ido_tokens_to_buy)
+            .unwrap();
+
+        buyer_info.spend_pay_tokens = buyer_info
+            .spend_pay_tokens
+            .checked_add(_amount_in_pay_token)
+            .unwrap();
+        buyer_info.ido_tokens_to_get = buyer_info
+            .ido_tokens_to_get
+            .checked_add(ido_tokens_to_buy)
+            .unwrap();
+        if !is_buyer {
+            sale_account.buyers_list.push(*ctx.accounts.user.key);
+        }
+        emit!(BoughtIDOTokens {
+            buyer: *ctx.accounts.user.key,
+            spend_pay_tokens: _amount_in_pay_token,
+            ido_tokens_to_get: ido_tokens_to_buy,
+            timestamp: Clock::get().unwrap().unix_timestamp
+        });
+        Ok(())
+    }
     /// Withdraw Pay Tokens from contract Only withdraw Pay tokens after the funding has ended
     pub fn withdraw_pay_tokens(
         ctx: Context<UpdateBothSaleAccount>,
@@ -329,11 +398,83 @@ impl<'info> UpdateBothSaleAccount<'info> {
 
 /// Validation struct for updating fields of SaleAccount with reference to the AuthorizedSaleAccount
 #[derive(Accounts)]
-pub struct UpdateSaleAccountWRefAuthorizedSaleAccount<'info> {
+pub struct USaleBuyerInfoWRefAuthSaleAccount<'info> {
     pub authorized_sale_account: Account<'info, AuthorizedSaleAccount>,
     #[account(mut)]
     pub sale_account: Account<'info, SaleAccount>,
+    #[account(mut, seeds = [b"buyer-info", user.key().as_ref()], bump = buyer_info.bump)]
+    pub buyer_info: Account<'info, BuyerInfo>,
     pub user: Signer<'info>,
+}
+impl<'info> USaleBuyerInfoWRefAuthSaleAccount<'info> {
+    // Checks
+    /// Check if the Funding period is open
+    pub fn is_funding_open_and_running(&self) -> bool {
+        let now_ts = Clock::get().unwrap().unix_timestamp;
+        assert!(
+            now_ts >= self.authorized_sale_account.start_date_funding
+                && now_ts <= self.authorized_sale_account.end_date_funding,
+            "The Funding Period is not Open"
+        );
+        true
+    }
+    /// Check if the Funding has been canceled
+    pub fn is_funding_canceled_by_admin(&self) -> bool {
+        assert_eq!(
+            self.authorized_sale_account.is_funding_canceled, true,
+            "Funding has not been canceled"
+        );
+        true
+    }
+    // Calculations
+    /// Calculates how much Payment tokens needed to acquire IDO token allocation
+    pub fn calculate_max_payment_token(&self, _ido_tokens_to_get: u128) -> u128 {
+        let authorized_sale_account = &self.authorized_sale_account;
+
+        let ido_token_decimal: u128 = 10u128.checked_pow(18 - 2).unwrap();
+        let pay_token_token_decimal: u128 = 10u128.checked_pow(6 - 2).unwrap();
+
+        let _ido_tokens_to_get: u128 = _ido_tokens_to_get.checked_div(ido_token_decimal).unwrap(); // 10000000000000000 / 10 ^ 16 = 1
+
+        let ido_token_price_ratio = authorized_sale_account.ido_token_price_ratio as u128;
+        let _divide_by_ratio = ido_token_price_ratio
+            .checked_mul(pay_token_token_decimal)
+            .unwrap(); // (4 * 10 ^ 3) * 10 ^ 4 = 4 * 10 ^ 7
+
+        let mut _amount_in_pay_token = (_ido_tokens_to_get).checked_mul(_divide_by_ratio).unwrap(); // 1 * 4 * 10 ^ 7 = 4 * 10 ^ 7
+        let ido_token_price_multiplier = authorized_sale_account.ido_token_price_multiplier as u128;
+        _amount_in_pay_token = _amount_in_pay_token
+            .checked_div(ido_token_price_multiplier)
+            .unwrap(); // (4 * 10 ^ 7) / 10 ^ 4 = 4 * 10 ^ 3 USDC tokens
+        _amount_in_pay_token
+    }
+    /// Calculate the amount of Ido Tokens bought
+    pub fn calculate_ido_tokens_bought(&self, _amount_in_pay_token: u128) -> u128 {
+        let authorized_sale_account = &self.authorized_sale_account;
+
+        let ido_token_decimal: u128 = 10u128.checked_pow(18 - 2).unwrap();
+        let pay_token_token_decimal: u128 = 10u128.checked_pow(6 - 2).unwrap();
+
+        let _amount_in_pay_token = _amount_in_pay_token
+            .checked_mul(authorized_sale_account.ido_token_price_multiplier as u128)
+            .unwrap(); // 250_000_000 * 10_000 = 2_500_000_000_000
+        let _divide_by_ratio = (authorized_sale_account.ido_token_price_ratio as u128)
+            .checked_mul(pay_token_token_decimal)
+            .unwrap(); // 4_000 * 10_000 = 40_000_000
+        let mut _ido_tokens_to_get = _amount_in_pay_token.checked_div(_divide_by_ratio).unwrap(); // 2_500_000_000_000 / 40_000_000 = 62_500
+        _ido_tokens_to_get = _ido_tokens_to_get.checked_mul(ido_token_decimal).unwrap(); // 62_500 * 10_000_000_000_000_000 = 625_000_000_000_000_000_000
+        _ido_tokens_to_get
+    }
+    /// Checks if buyer's in buyer list
+    pub fn is_buyer(&self, _buyer: Pubkey) -> bool {
+        let buyers_list = &self.sale_account.buyers_list;
+        for buyer in buyers_list {
+            if buyer.to_bytes() == _buyer.to_bytes() {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 /// Validation struct for reading fields of both SaleAccount and AuthorizedSaleAccount
