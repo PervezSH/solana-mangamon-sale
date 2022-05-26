@@ -381,15 +381,6 @@ describe("solana-mangamon-sale", () => {
       program.programId
     );
     try {
-      // cancel funding
-      await program.methods
-        .cancelIdoSale()
-        .accounts({
-          authorizedSaleAccount: authorizedSaleAccount.publicKey,
-          saleAccount: saleAccount.publicKey,
-          admin: provider.wallet.publicKey,
-        })
-        .rpc();
       await program.methods
         .buy(
           new anchor.BN(4000)

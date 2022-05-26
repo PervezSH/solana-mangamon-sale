@@ -350,14 +350,48 @@ pub mod solana_mangamon_sale {
     /// and create a receipt that can later be claimed by the buyer
     pub fn buy(ctx: Context<BuyersOnlyUpdate>, _amount_in_pay_token: u128) -> Result<()> {
         ctx.accounts.is_funding_open_and_running();
-        ctx.accounts.is_funding_canceled_by_admin();
+        ctx.accounts.is_funding_not_canceled_by_admin();
         // todo: isLotteryPlayedAndAllocationCalculated
         // todo: onlyWinners
-        let amount_in_pay_token = ctx.accounts.calculate_max_payment_token(10000000000000000); // todo: data fron lottery contract
-        let ido_tokens_to_buy = ctx
-            .accounts
-            .calculate_ido_tokens_bought(_amount_in_pay_token);
-        let is_buyer = ctx.accounts.is_buyer(*ctx.accounts.user.key);
+        let amount_in_pay_token = calculate_max_payment_token(
+            Context::new(
+                &crate::id(),
+                &mut ReadAccounts {
+                    authorized_sale_account: ctx.accounts.authorized_sale_account.clone(),
+                    sale_account: ctx.accounts.sale_account.clone(),
+                    user: ctx.accounts.user.clone(),
+                },
+                &[],
+                std::collections::BTreeMap::new(),
+            ),
+            10000000000000000, // todo: data fron lottery contract
+        )?;
+        let ido_tokens_to_buy = calculate_ido_tokens_bought(
+            Context::new(
+                &crate::id(),
+                &mut ReadAccounts {
+                    authorized_sale_account: ctx.accounts.authorized_sale_account.clone(),
+                    sale_account: ctx.accounts.sale_account.clone(),
+                    user: ctx.accounts.user.clone(),
+                },
+                &[],
+                std::collections::BTreeMap::new(),
+            ),
+            _amount_in_pay_token,
+        )?;
+        let is_buyer = is_buyer(
+            Context::new(
+                &crate::id(),
+                &mut ReadAccounts {
+                    authorized_sale_account: ctx.accounts.authorized_sale_account.clone(),
+                    sale_account: ctx.accounts.sale_account.clone(),
+                    user: ctx.accounts.user.clone(),
+                },
+                &[],
+                std::collections::BTreeMap::new(),
+            ),
+            *ctx.accounts.user.key,
+        )?;
 
         assert!(_amount_in_pay_token > 0, "Amount has to be positive");
         // todo: check user has enough pay tokens
