@@ -323,5 +323,70 @@ describe("solana-mangamon-sale", () => {
                 expect(String(returnData)).to.equal("22340000000000000000");
             });
         });
+        describe("#fundToContract()", function () {
+            // Create an account keypair for our program to use.
+            const authorizedSaleAccount = anchor.web3.Keypair.generate();
+            const saleAccount = anchor.web3.Keypair.generate();
+            before(async function () {
+                try {
+                    await program.methods
+                        .initialize(
+                            new anchor.BN(4000),
+                            new anchor.BN(1652972400),
+                            new anchor.BN(1653646545),
+                            new anchor.BN(1666504800),
+                            20,
+                            false,
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            user: provider.wallet.publicKey,
+                        })
+                        .signers([authorizedSaleAccount, saleAccount])
+                        .rpc();
+                } catch (error) {
+                    console.log(error);
+                }
+            });
+            it("Should calculate the amount of IDO token bought!", async function () {
+                try {
+                    await program.methods
+                        .fundToContract(
+                            new anchor.BN("14735370000000000000000")
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            admin: provider.wallet.publicKey,
+                        })
+                        .rpc();
+                } catch (error) {
+                    console.log(error)
+                }
+                expect(String((await program.account.authorizedSaleAccount
+                    .fetch(authorizedSaleAccount.publicKey)).tokensForSale)).to.equal("14735370000000000000000");
+                expect((await program.account.authorizedSaleAccount
+                    .fetch(authorizedSaleAccount.publicKey)).isIdoTokenFundedToContract).to.equal(true);
+            });
+            it(`Should throw error, saying "Already funded tokens"!`, async function () {
+                let e: any;
+                try {
+                    await program.methods
+                        .fundToContract(
+                            new anchor.BN("14735370000000000000000")
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            admin: provider.wallet.publicKey,
+                        })
+                        .rpc();
+                } catch (error) {
+                    e = error;
+                }
+                expect(JSON.stringify(e).includes("Already funded tokens")).to.equal(true);
+            });
+        });
     });
 });
