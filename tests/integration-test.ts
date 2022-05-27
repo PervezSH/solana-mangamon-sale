@@ -460,5 +460,150 @@ describe("solana-mangamon-sale", () => {
                 expect(JSON.stringify(e).includes("You cannot buy more tokens than is allowed according to your lottery allocation calculation")).to.equal(true);
             });
         });
+        describe("#claimTokens()", function () {
+            // Create an account keypair for our program to use.
+            const authorizedSaleAccount = anchor.web3.Keypair.generate();
+            const saleAccount = anchor.web3.Keypair.generate();
+            let e: any;
+            before(async function () {
+                try {
+                    await program.methods
+                        .initialize(
+                            new anchor.BN(4000),
+                            new anchor.BN(1652972400),
+                            new anchor.BN(1653285600),
+                            new anchor.BN(1666504800),
+                            20,
+                            false,
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            user: provider.wallet.publicKey,
+                        })
+                        .signers([authorizedSaleAccount, saleAccount])
+                        .rpc();
+                } catch (error) {
+                    console.log(error);
+                }
+            });
+            it(`Should throw error saying "Tokens have not been added to the contract YET"!`, async function () {
+                const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+                    [
+                        anchor.utils.bytes.utf8.encode("buyer-info"),
+                        provider.wallet.publicKey.toBuffer()
+                    ],
+                    program.programId
+                );
+                try {
+                    await program.methods
+                        .claimTokens()
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            buyerInfo: buyerInfoPDA,
+                            user: provider.wallet.publicKey
+                        })
+                        .rpc();
+                } catch (error) {
+                    e = error;
+                }
+                const stringifiedError = JSON.stringify(e);
+                expect(stringifiedError.includes("Tokens have not been added to the contract YET")).to.equal(true);
+            });
+            it(`Should throw error saying "Cannot claim, you need to wait until claiming is enabled"!`, async function () {
+                const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+                    [
+                        anchor.utils.bytes.utf8.encode("buyer-info"),
+                        provider.wallet.publicKey.toBuffer()
+                    ],
+                    program.programId
+                );
+                try {
+                    await program.methods
+                        .fundToContract(
+                            new anchor.BN("14735370000000000000000")
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            admin: provider.wallet.publicKey,
+                        })
+                        .rpc();
+                    await program.methods
+                        .claimTokens()
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            buyerInfo: buyerInfoPDA,
+                            user: provider.wallet.publicKey
+                        })
+                        .rpc();
+                } catch (error) {
+                    e = error;
+                }
+                const stringifiedError = JSON.stringify(e);
+                expect(stringifiedError.includes("Cannot claim, you need to wait until claiming is enabled")).to.equal(true);
+            });
+            it(`Should throw error saying "You are not a buyer"!`, async function () {
+                const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+                    [
+                        anchor.utils.bytes.utf8.encode("buyer-info"),
+                        provider.wallet.publicKey.toBuffer()
+                    ],
+                    program.programId
+                );
+                try {
+                    await program.methods
+                        .enableClaiming(
+                            true,
+                            new anchor.BN(1656090000)
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            admin: provider.wallet.publicKey,
+                        })
+                        .rpc();
+                    await program.methods
+                        .claimTokens()
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            buyerInfo: buyerInfoPDA,
+                            user: provider.wallet.publicKey
+                        })
+                        .rpc();
+                } catch (error) {
+                    e = error;
+                }
+                const stringifiedError = JSON.stringify(e);
+                expect(stringifiedError.includes("You are not a buyer")).to.equal(true);
+            });
+            it("Should let buyer claim all IDO tokens he has bought!", async function () {
+                const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+                    [
+                        anchor.utils.bytes.utf8.encode("buyer-info"),
+                        provider.wallet.publicKey.toBuffer()
+                    ],
+                    program.programId
+                );
+                try {
+                    await program.methods
+                        .claimTokens()
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            buyerInfo: buyerInfoPDA,
+                            user: provider.wallet.publicKey
+                        })
+                        .rpc();
+                } catch (error) {
+                    e = error;
+                }
+                expect(String((await program.account.buyerInfo
+                    .fetch(buyerInfoPDA)).idoTokensClaimed)).to.equal("0");
+            });
+        });
     });
 });
