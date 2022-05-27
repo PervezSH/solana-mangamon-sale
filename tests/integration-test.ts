@@ -15,7 +15,7 @@ async function initializateAccount(authorizedSaleAccount: anchor.web3.Keypair, s
         .initialize(
             new anchor.BN(4000),
             new anchor.BN(1652972400),
-            new anchor.BN(1653285600),
+            new anchor.BN(1654285600),
             new anchor.BN(1666504800),
             20,
             false,
@@ -91,7 +91,7 @@ describe("solana-mangamon-sale", () => {
             expect((await program.account.authorizedSaleAccount
                 .fetch(authorizedSaleAccount.publicKey)).startDateFunding.toNumber()).to.equal(1652972400);
             expect((await program.account.authorizedSaleAccount
-                .fetch(authorizedSaleAccount.publicKey)).endDateFunding.toNumber()).to.equal(1653285600);
+                .fetch(authorizedSaleAccount.publicKey)).endDateFunding.toNumber()).to.equal(1654285600);
             expect((await program.account.authorizedSaleAccount
                 .fetch(authorizedSaleAccount.publicKey)).endDateOfClaimingTokens.toNumber()).to.equal(1666504800);
             expect((await program.account.authorizedSaleAccount
@@ -386,6 +386,78 @@ describe("solana-mangamon-sale", () => {
                     e = error;
                 }
                 expect(JSON.stringify(e).includes("Already funded tokens")).to.equal(true);
+            });
+        });
+        describe("#buy()", function () {
+            // Create an account keypair for our program to use.
+            const authorizedSaleAccount = anchor.web3.Keypair.generate();
+            const saleAccount = anchor.web3.Keypair.generate();
+            let e: any;
+            before(async function () {
+                try {
+                    await initializateAccount(authorizedSaleAccount, saleAccount);
+                } catch (error) {
+                    console.log(error);
+                }
+            });
+            it("Should let user buy IDO tokens worth of 4000 pay tokens!", async function () {
+                const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+                    [
+                        anchor.utils.bytes.utf8.encode("buyer-info"),
+                        provider.wallet.publicKey.toBuffer()
+                    ],
+                    program.programId
+                );
+                try {
+                    await program.methods
+                        .buy(
+                            new anchor.BN(4000)
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            buyerInfo: buyerInfoPDA,
+                            user: provider.wallet.publicKey
+                        })
+                        .rpc();
+                } catch (error) {
+                    console.log(error);
+                }
+                expect((await program.account.saleAccount
+                    .fetch(saleAccount.publicKey)).investorCount.toNumber()).to.equal(1);
+                expect(String((await program.account.saleAccount
+                    .fetch(saleAccount.publicKey)).totalSpendPayTokens)).to.equal("4000");
+                expect(String((await program.account.saleAccount
+                    .fetch(saleAccount.publicKey)).totalAllocatedIdoTokens)).to.equal("10000000000000000");
+                expect(String((await program.account.buyerInfo
+                    .fetch(buyerInfoPDA)).spendPayTokens)).to.equal("4000");
+                expect(String((await program.account.buyerInfo
+                    .fetch(buyerInfoPDA)).idoTokensToGet)).to.equal("10000000000000000");
+            });
+            it(`Should throw error saying, "You cannot buy more tokens than is allowed according to your lottery allocation calculation"!`, async function () {
+                const [buyerInfoPDA, _] = await PublicKey.findProgramAddress(
+                    [
+                        anchor.utils.bytes.utf8.encode("buyer-info"),
+                        provider.wallet.publicKey.toBuffer()
+                    ],
+                    program.programId
+                );
+                try {
+                    await program.methods
+                        .buy(
+                            new anchor.BN(2000)
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            buyerInfo: buyerInfoPDA,
+                            user: provider.wallet.publicKey
+                        })
+                        .rpc();
+                } catch (error) {
+                    e = error;
+                }
+                expect(JSON.stringify(e).includes("You cannot buy more tokens than is allowed according to your lottery allocation calculation")).to.equal(true);
             });
         });
     });
