@@ -10,11 +10,7 @@ anchor.setProvider(provider);
 
 const program = anchor.workspace.SolanaMangamonSale as Program<SolanaMangamonSale>;
 
-// Create an account keypair for our program to use.
-const authorizedSaleAccount = anchor.web3.Keypair.generate();
-const saleAccount = anchor.web3.Keypair.generate();
-
-async function initializateAccount() {
+async function initializateAccount(authorizedSaleAccount: anchor.web3.Keypair, saleAccount: anchor.web3.Keypair) {
     await program.methods
         .initialize(
             new anchor.BN(4000),
@@ -66,14 +62,17 @@ async function createPDA(_buyer: PublicKey) {
 }
 
 describe("solana-mangamon-sale", () => {
-    before(async function () {
-        try {
-            await initializateAccount();
-        } catch (error) {
-            console.log(error);
-        }
-    });
     describe("#initialization", function () {
+        // Create an account keypair for our program to use.
+        const authorizedSaleAccount = anchor.web3.Keypair.generate();
+        const saleAccount = anchor.web3.Keypair.generate();
+        before(async function () {
+            try {
+                await initializateAccount(authorizedSaleAccount, saleAccount);
+            } catch (error) {
+                console.log(error);
+            }
+        });
         it("Checks if everything initialized correctly!", async function () {
             expect((await program.account.authorizedSaleAccount
                 .fetch(authorizedSaleAccount.publicKey)).idoTokenPriceRatio.toNumber()).to.equal(4000);
@@ -123,6 +122,16 @@ describe("solana-mangamon-sale", () => {
     });
     describe("#setters", function () {
         describe("#setInitialPercentageAllocationIdoTokens()", function () {
+            // Create an account keypair for our program to use.
+            const authorizedSaleAccount = anchor.web3.Keypair.generate();
+            const saleAccount = anchor.web3.Keypair.generate();
+            before(async function () {
+                try {
+                    await initializateAccount(authorizedSaleAccount, saleAccount);
+                } catch (error) {
+                    console.log(error);
+                }
+            });
             let e: any;
             it("Should change initial percentage of token allocation to 25!", async function () {
                 try {
@@ -161,6 +170,16 @@ describe("solana-mangamon-sale", () => {
             });
         });
         describe("#enableClaiming()", function () {
+            // Create an account keypair for our program to use.
+            const authorizedSaleAccount = anchor.web3.Keypair.generate();
+            const saleAccount = anchor.web3.Keypair.generate();
+            before(async function () {
+                try {
+                    await initializateAccount(authorizedSaleAccount, saleAccount);
+                } catch (error) {
+                    console.log(error);
+                }
+            });
             it("Should enable isClaimingOpen, and initialize the field startDateOfClaimingTokens!", async function () {
                 try {
                     await program.methods
@@ -184,9 +203,48 @@ describe("solana-mangamon-sale", () => {
             });
         });
         describe("#setEndDateOfClaimingTokens()", function () {
+            // Create an account keypair for our program to use.
+            const authorizedSaleAccount = anchor.web3.Keypair.generate();
+            const saleAccount = anchor.web3.Keypair.generate();
+            before(async function () {
+                try {
+                    await initializateAccount(authorizedSaleAccount, saleAccount);
+                } catch (error) {
+                    console.log(error);
+                }
+            });
+            it("Should change the end date for tokens to be claimed!", async function () {
+                try {
+                    await program.methods
+                        .setEndDateOfClaimingTokens(
+                            new anchor.BN(1656090000)
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            admin: provider.wallet.publicKey,
+                        })
+                        .rpc();
+                } catch (error) {
+                    console.log(error);
+                }
+                expect((await program.account.authorizedSaleAccount
+                    .fetch(authorizedSaleAccount.publicKey)).endDateOfClaimingTokens.toNumber()).to.equal(1656090000);
+            });
             it("Should throw error, as claiming is already enabled!", async function () {
                 let e: any;
                 try {
+                    await program.methods
+                        .enableClaiming(
+                            true,
+                            new anchor.BN(1656090000)
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            admin: provider.wallet.publicKey,
+                        })
+                        .rpc();
                     await program.methods
                         .setEndDateOfClaimingTokens(
                             new anchor.BN(1656090000)
@@ -206,6 +264,16 @@ describe("solana-mangamon-sale", () => {
     });
     describe("#business logic", function () {
         describe("#calculateMaxPaymentToken()", function () {
+            // Create an account keypair for our program to use.
+            const authorizedSaleAccount = anchor.web3.Keypair.generate();
+            const saleAccount = anchor.web3.Keypair.generate();
+            before(async function () {
+                try {
+                    await initializateAccount(authorizedSaleAccount, saleAccount);
+                } catch (error) {
+                    console.log(error);
+                }
+            });
             it("Should calculate the payment token need to acquire the IDO token allocation!", async function () {
                 let returnData: anchor.BN;
                 try {
@@ -226,6 +294,16 @@ describe("solana-mangamon-sale", () => {
             });
         });
         describe("#calculateIdoTokensBought()", function () {
+            // Create an account keypair for our program to use.
+            const authorizedSaleAccount = anchor.web3.Keypair.generate();
+            const saleAccount = anchor.web3.Keypair.generate();
+            before(async function () {
+                try {
+                    await initializateAccount(authorizedSaleAccount, saleAccount);
+                } catch (error) {
+                    console.log(error);
+                }
+            });
             it("Should calculate the amount of IDO token bought!", async function () {
                 let returnData: anchor.BN;
                 try {
