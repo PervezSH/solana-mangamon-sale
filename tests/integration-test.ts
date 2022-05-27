@@ -160,5 +160,28 @@ describe("solana-mangamon-sale", () => {
                 expect(JSON.stringify(e).includes("You cannot give more than 100 percent of the token allocation")).to.equal(true);
             });
         });
+        describe("#enableClaiming()", function () {
+            it("Should enable isClaimingOpen, and initialize the field startDateOfClaimingTokens!", async function () {
+                try {
+                    await program.methods
+                        .enableClaiming(
+                            true,
+                            new anchor.BN(1656090000)
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            admin: provider.wallet.publicKey,
+                        })
+                        .rpc();
+                } catch (error) {
+                    console.log(error);
+                }
+                expect((await program.account.authorizedSaleAccount
+                    .fetch(authorizedSaleAccount.publicKey)).isClaimingOpen).to.equal(true);
+                expect((await program.account.authorizedSaleAccount
+                    .fetch(authorizedSaleAccount.publicKey)).startDateOfClaimingTokens.toNumber()).to.equal(1656090000);
+            });
+        });
     });
 });
