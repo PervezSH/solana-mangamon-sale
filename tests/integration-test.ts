@@ -204,4 +204,46 @@ describe("solana-mangamon-sale", () => {
             });
         });
     });
+    describe("#business logic", function () {
+        describe("#calculateMaxPaymentToken()", function () {
+            it("Should calculate the payment token need to acquire the IDO token allocation!", async function () {
+                let returnData: anchor.BN;
+                try {
+                    returnData = await program.methods
+                        .calculateMaxPaymentToken(
+                            new anchor.BN("22345623767423223324")
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            user: provider.wallet.publicKey,
+                        })
+                        .view();
+                } catch (error) {
+                    console.log(error)
+                }
+                expect(returnData.toNumber()).to.equal(8936000);
+            });
+        });
+        describe("#calculateIdoTokensBought()", function () {
+            it("Should calculate the amount of IDO token bought!", async function () {
+                let returnData: anchor.BN;
+                try {
+                    returnData = await program.methods
+                        .calculateIdoTokensBought(
+                            new anchor.BN("8936000")
+                        )
+                        .accounts({
+                            authorizedSaleAccount: authorizedSaleAccount.publicKey,
+                            saleAccount: saleAccount.publicKey,
+                            user: provider.wallet.publicKey,
+                        })
+                        .view();
+                } catch (error) {
+                    console.log(error)
+                }
+                expect(String(returnData)).to.equal("22340000000000000000");
+            });
+        });
+    });
 });
